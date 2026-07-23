@@ -6,10 +6,12 @@ import {sellProductLocations, sellProductRegions, settlementData, toPascalCase} 
 import sellProductAdbRows from "./pipeline-adb-data.mjs";
 import sellProductPipelineRows from "./pipeline-data.mjs";
 import sellProductSellRows from "./sell-data.mjs";
+import {sellProductSelectionData} from "./selection-data.mjs";
 import sellProductSessionRows from "./session-data.mjs";
 import {sellProductTaskRows} from "./task-data.mjs";
 
 const root = sellProductTaskRows[0];
+const wulingRoot = sellProductTaskRows.find((row) => row.RegionPrefix === "Wuling");
 
 function sortedKeys(value) {
     return Object.keys(value).sort();
@@ -25,7 +27,14 @@ test("SellProduct 保留按星期执行入口与任务选项", () => {
     const taskTemplate = readFileSync(new URL("./task-template.jsonc", import.meta.url), "utf8");
 
     assert.equal(task.task[0].entry, "SellProductSchedule");
-    assert.ok(task.task[0].option.includes("SellProductSchedule"));
+    assert.deepEqual(task.task[0].option, [
+        "SellProductSchedule",
+        "SellProductOperatorAutoSwitch",
+        "SellProductPriorityRules",
+        "SellProductItemReserveRules",
+        "ValleyIVSell",
+        "WulingSell",
+    ]);
     assert.equal(task.option.SellProductSchedule.type, "checkbox");
     assert.equal(task.option.SellProductSchedule.cases.length, 7);
     assert.match(taskTemplate, /"entry": "SellProductSchedule"/);
@@ -89,6 +98,7 @@ test("SellProduct templates consume separate minimal projections of the shared l
     ]);
     assert.deepEqual(sortedKeys(root), [
         "LocationId",
+        "OnlyPreferredSwitchCases",
         "OperatorRefreshModeCases",
         "PriorityItemCases1",
         "PriorityItemCases2",
@@ -98,6 +108,7 @@ test("SellProduct templates consume separate minimal projections of the shared l
         "PriorityItemCases6",
         "PriorityRuleSwitchCases",
         "RegionPrefix",
+        "RegionPriorityRuleSwitchCases",
         "ReserveItemCases1",
         "ReserveItemCases2",
         "ReserveItemCases3",
@@ -112,6 +123,7 @@ test("SellProduct templates consume separate minimal projections of the shared l
         "ReserveModeCases6",
         "ReserveRuleSwitchCases",
         "SellOptions",
+        "TaskOptions",
     ]);
     assert.deepEqual(
         sellProductPipelineRows[0].CurrentOperatorROI,
@@ -153,14 +165,8 @@ test("SellProduct region entry rows contain every generated location", () => {
             "SellProductLoop",
             "[JumpBack]SceneEnterMenuRegionalDevelopment",
         );
-        assert.deepEqual(row.SellNext, [
-            `[Anchor]SellProduct${region.RegionPrefix}PrepareOperatorCache`,
-            ...outpostNext,
-        ]);
-        assert.deepEqual(row.PrepareNext, [
-            "SellProductOutpostLocked",
-            ...outpostNext,
-        ]);
+        assert.deepEqual(row.SellNext, [`SellProduct${region.RegionPrefix}InitializePrioritySession`]);
+        assert.deepEqual(row.PrepareNext, outpostNext);
     }
 });
 
@@ -184,19 +190,54 @@ test("SellProduct reserve rules only expand independent item slots", () => {
     assert.equal(enabledCase.pipeline_override, undefined);
 });
 
-test("SellProduct priority switch expands six direct priority slots", () => {
+test("SellProduct 优先总开关展开地区配置且不耦合地区售卖开关", () => {
     const enabledCase = root.PriorityRuleSwitchCases.find((itemCase) => itemCase.name === "Yes");
     assert.deepEqual(enabledCase.option, [
-        "SellProductPriorityItem1",
-        "SellProductPriorityItem2",
-        "SellProductPriorityItem3",
-        "SellProductPriorityItem4",
-        "SellProductPriorityItem5",
-        "SellProductPriorityItem6",
+        "SellProductOnlyPreferredItems",
+        "SellProductValleyIVPriorityRules",
+        "SellProductWulingPriorityRules",
     ]);
-    assert.equal(enabledCase.pipeline_override, undefined);
+    assert.deepEqual(enabledCase.pipeline_override.SellProductConfigurePrioritySession.custom_action_param, {
+        operation: "configure",
+        enabled: true,
+    });
     const disabledCase = root.PriorityRuleSwitchCases.find((itemCase) => itemCase.name === "No");
     assert.equal(disabledCase.option, undefined);
+
+    const onlyPreferredCase = root.OnlyPreferredSwitchCases.find((itemCase) => itemCase.name === "Yes");
+    assert.deepEqual(onlyPreferredCase.pipeline_override.SellProductConfigurePrioritySession.custom_action_param, {
+        operation: "configure",
+        enabled: true,
+        only_preferred: true,
+    });
+
+    assert.ok(wulingRoot);
+    for (const regionRoot of [
+        root,
+        wulingRoot,
+    ]) {
+        const regionPrefix = regionRoot.RegionPrefix;
+        const regionEnabledCase = regionRoot.RegionPriorityRuleSwitchCases.find((itemCase) => itemCase.name === "Yes");
+        assert.deepEqual(
+            regionEnabledCase.option,
+            [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+            ].map((slot) => `SellProduct${regionPrefix}PriorityItem${slot}`),
+        );
+        assert.deepEqual(
+            regionEnabledCase.pipeline_override[`SellProduct${regionPrefix}InitializePrioritySession`]
+                .custom_action_param,
+            {
+                operation: "reset_preferred",
+                enabled: true,
+            },
+        );
+    }
 
     for (const slot of [
         1,
@@ -211,12 +252,31 @@ test("SellProduct priority switch expands six direct priority slots", () => {
         assert.ok(noneCase);
         assert.equal(noneCase.pipeline_override, undefined);
 
-        const itemCase = cases.find((entry) => entry.name === "精选荞愈胶囊");
+        const itemCase = cases.find((entry) => entry.name !== "None");
         assert.ok(itemCase);
-        const registration = itemCase.pipeline_override[`SellProductRegisterPriorityItem${slot}`];
+        const registration = itemCase.pipeline_override[`SellProductValleyIVRegisterPriorityItem${slot}`];
         assert.equal(registration.enabled, undefined);
         assert.equal(registration.custom_action_param.operation, "register");
         assert.ok(registration.custom_action_param.item_id.startsWith("item_"));
+    }
+
+    const valleyItemIDs = new Set(
+        sellProductLocations
+            .filter((location) => location.RegionPrefix === "ValleyIV")
+            .flatMap((location) => sellProductSelectionData.locations[location.LocationId].item_order),
+    );
+    const wulingItemIDs = new Set(
+        sellProductLocations
+            .filter((location) => location.RegionPrefix === "Wuling")
+            .flatMap((location) => sellProductSelectionData.locations[location.LocationId].item_order),
+    );
+    for (const itemCase of root.PriorityItemCases1.filter((entry) => entry.name !== "None")) {
+        const itemID = itemCase.pipeline_override.SellProductValleyIVRegisterPriorityItem1.custom_action_param.item_id;
+        assert.ok(valleyItemIDs.has(itemID));
+    }
+    for (const itemCase of wulingRoot.PriorityItemCases1.filter((entry) => entry.name !== "None")) {
+        const itemID = itemCase.pipeline_override.SellProductWulingRegisterPriorityItem1.custom_action_param.item_id;
+        assert.ok(wulingItemIDs.has(itemID));
     }
 });
 
@@ -261,12 +321,7 @@ test("SellProduct registration slots form an always-enabled no-op chain", () => 
         "SellProductRegisterReserveRule4",
         "SellProductRegisterReserveRule5",
         "SellProductRegisterReserveRule6",
-        "SellProductRegisterPriorityItem1",
-        "SellProductRegisterPriorityItem2",
-        "SellProductRegisterPriorityItem3",
-        "SellProductRegisterPriorityItem4",
-        "SellProductRegisterPriorityItem5",
-        "SellProductRegisterPriorityItem6",
+        "SellProductConfigurePrioritySession",
         "SellProductInitializeOperatorSession",
     ];
 
@@ -275,6 +330,31 @@ test("SellProduct registration slots form an always-enabled no-op chain", () => 
         assert.ok(node, `missing registration node ${chain[index]}`);
         assert.equal(node.enabled, undefined);
         assert.deepEqual(node.next, [chain[index + 1]]);
+    }
+});
+
+test("SellProduct 每次进入地区都会切换对应的优先售卖表", () => {
+    const pipeline = readPipeline(new URL("../../../assets/resource/pipeline/SellProduct/Sell.json", import.meta.url));
+
+    for (const region of sellProductRegions) {
+        const chain = [
+            `SellProduct${region.RegionPrefix}InitializePrioritySession`,
+            ...[
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+            ].map((slot) => `SellProduct${region.RegionPrefix}RegisterPriorityItem${slot}`),
+            `SellProduct${region.RegionPrefix}PrepareOperatorCache`,
+        ];
+        assert.deepEqual(pipeline[`SellProduct${region.RegionPrefix}Sell`].next, [chain[0]]);
+        assert.equal(pipeline[chain[0]].custom_action_param.operation, "reset_preferred");
+        assert.equal(pipeline[chain[0]].custom_action_param.enabled, false);
+        for (let index = 0; index < chain.length - 1; index += 1) {
+            assert.deepEqual(pipeline[chain[index]].next, [chain[index + 1]]);
+        }
     }
 });
 

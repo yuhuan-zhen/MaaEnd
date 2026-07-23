@@ -8,6 +8,7 @@
             "[JumpBack]VisitFriendsAssistFull",
             "[JumpBack]VisitFriendsClueExchangeFull",
             "VisitFriendsMenuScanFriendsFull",
+            "[JumpBack]VisitFriendsMenuScanTargetFriendOpenRemark",
             "[JumpBack]VisitFriendsMenuScanTargetFriendOpen",
             "[JumpBack]VisitFriendsMenuScanScrollList",
             "VisitFriendsMenuScanScrollFinish"
@@ -42,13 +43,14 @@
         }
     },
     "VisitFriendsMenuScanSelectFriendRemarkConsumable": {
-        "desc": "消费性选友（仅备注）：VisitFriendsRemark=Yes 时启用，与普通选友共享 visited",
-        "enabled": false,
+        "desc": "消费性选友（仅备注）：与普通选友共享 visited；由 TargetFriendOpenRemark 链路调用",
         "recognition": "Custom",
         "custom_recognition": "ExpendableRecognition",
         "custom_recognition_param": {
             "candidate": "VisitFriendsRecognitionItemWithRemark",
-            "visited_node": "VisitFriendsMenuScanVisited"
+            "visited_node": "VisitFriendsMenuScanVisited",
+            // 备注形如 小明(Alice#1001)；按第一个 )／）截断，去掉 ) 后 OCR 尾噪。
+            "key_regex": ".*?[)）]"
         }
     },
     "VisitFriendsMenuScanSelectFriendConsumable": {
@@ -57,22 +59,34 @@
         "custom_recognition": "ExpendableRecognition",
         "custom_recognition_param": {
             "candidate": "VisitFriendsRecognitionItemWithName",
-            "visited_node": "VisitFriendsMenuScanVisited"
+            "visited_node": "VisitFriendsMenuScanVisited",
+            // 普通形如 Alice#1001；截到 #数字，去掉 UID 后 OCR 尾噪（Alice#1001小）。
+            "key_regex": ".*?\\#\\d+"
         }
     },
-    "VisitFriendsMenuScanSelectFriendOr": {
-        "desc": "优先备注（若启用）否则任意好友；命中框为名字框",
-        "recognition": "Or",
-        "any_of": [
+    "VisitFriendsMenuScanTargetFriendOpenRemark": {
+        "desc": "备注选友链路：名字框 ∧ 进船图标；默认启用便于节点测试，VisitFriendsRemark=No 时关闭；进船点击走 EnterShipRemark",
+        "enabled": true,
+        "recognition": "And",
+        "all_of": [
             "VisitFriendsMenuScanSelectFriendRemarkConsumable",
-            "VisitFriendsMenuScanSelectFriendConsumable"
+            "VisitFriendsRecognitionItemEnterButtonByNameRemark"
+        ],
+        "box_index": 1,
+        "pre_delay": 0,
+        "action": "Click",
+        "post_wait_freezes": 200,
+        "post_delay": 0,
+        "next": [
+            "VisitFriendsCheckAssistRemark",
+            "VisitFriendsMenuScanDetailClose"
         ]
     },
     "VisitFriendsMenuScanTargetFriendOpen": {
-        "desc": "选友名字框 ∧ 右侧偏移植进船图标；box_index=1 点击飞船按钮",
+        "desc": "普通选友链路：名字框 ∧ 进船图标；box_index=1 点击飞船按钮",
         "recognition": "And",
         "all_of": [
-            "VisitFriendsMenuScanSelectFriendOr",
+            "VisitFriendsMenuScanSelectFriendConsumable",
             "VisitFriendsRecognitionItemEnterButtonByName"
         ],
         "box_index": 1,
@@ -83,6 +97,20 @@
         "next": [
             "VisitFriendsCheckAssist",
             "VisitFriendsMenuScanDetailClose"
+        ]
+    },
+    "VisitFriendsCheckAssistRemark": {
+        "desc": "备注链路打开详情后检查可访问资源，进船点击复用备注选中的飞船框",
+        "recognition": "And",
+        "all_of": [
+            "VisitFriendsCheckAssist"
+        ],
+        "pre_wait_freezes": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": [
+            "VisitFriendsEnterShipRemark"
         ]
     },
     "VisitFriendsMenuScanScrollFinish": {
@@ -125,10 +153,7 @@
             150
         ],
         "end_hold": 600, // 太短了松开会晃动
-        "post_delay": 0,
-        "focus": {
-            "Node.Action.Succeeded": "向下滑动好友列表"
-        }
+        "post_delay": 0
     },
     "VisitFriendsCheckAssist": {
         "desc": "打开好友详情后检查可访问资源（识别②）：线索交换固定开启；助力子节点未勾选时为 OCR a^，勾选后覆盖为 TemplateMatch",
@@ -144,11 +169,7 @@
         "post_delay": 0,
         "next": [
             "VisitFriendsEnterShip"
-        ],
-        "focus": {
-            "Node.Recognition.Succeeded": "好友有需要的资源",
-            "Node.Recognition.Failed": "好友没有需要的资源"
-        }
+        ]
     },
     "VisitFriendsCheckAssistClueExchange": {
         "desc": "检查是否可线索交换（固定开启，不可关闭）",
