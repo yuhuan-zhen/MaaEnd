@@ -143,9 +143,11 @@ func (a *SelectItemAction) Run(ctx *maa.Context, arg *maa.CustomActionArg) bool 
 		return stopTaskWithFocus(ctx, mapComputeDecisionErrorToAbortReason(err), err)
 	}
 
-	// 「至少购买一个」：正常选品失败 + 非爆仓 + 四号谷地 → 降级重选
-	if !selection.Selected && attach.MinBuyCount > 0 && region == "ValleyIV" && !bypassThresholdFilter {
-		selection2, _, err2 := computeDecision(*data, cfg, true) // 爆仓模式重跑
+	// 「至少购买一个」：正常选品失败 + 非爆仓 + 所选区域 → 降级重选
+	minBuyEnabled := attach.MinBuyCount >= 1 && !bypassThresholdFilter &&
+		attach.MinBuyRegion == region
+	if !selection.Selected && minBuyEnabled {
+		selection2, _, err2 := computeDecision(*data, cfg, true) // 忽视阈值购买
 		if err2 != nil {
 			return stopTaskWithFocus(ctx, mapComputeDecisionErrorToAbortReason(err2), err2)
 		}
@@ -248,7 +250,7 @@ func (a *SelectItemAction) Run(ctx *maa.Context, arg *maa.CustomActionArg) bool 
 			Selection:        selection,
 			QuantityDecision: quantityDecision,
 		},
-		SkipNextRound: minBuyFallback && selection.Selected,
+		SkipNextRound: minBuyFallback,
 	})
 
 	selectionMode := formatSelectionMode(selection, *data)
