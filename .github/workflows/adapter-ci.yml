@@ -1,0 +1,94 @@
+name: adapter-ci
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/adapter-ci.yml"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "要校验的 git ref（留空 = 触发时所在分支）"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: adapter-ci-${{ github.ref }}-${{ inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python 语法
+        run: python -m compileall -q web/
+
+      - name: JSON / YAML 可解析
+        run: |
+          python -m pip install --quiet pyyaml
+          python - <<'PY'
+          import json, pathlib, sys
+          import yaml
+          bad = []
+          for p in pathlib.Path("web").rglob("*"):
+              if not p.is_file():
+                  continue
+              try:
+                  if p.suffix == ".json":
+                      json.loads(p.read_text(encoding="utf-8"))
+                  elif p.suffix in (".yml", ".yaml"):
+                      yaml.safe_load(p.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  bad.append(f"{p}: {exc}")
+          print("\n".join(bad) if bad else "all json/yaml parsed")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - name: 硬编码路径告警 / 疑似凭证阻断
+        run: |
+          set +e
+          paths=$(grep -RInE '([A-Za-z]:\\Users\\|/home/[a-z0-9_-]+/)' web --include='*.py' --include='*.cs')
+          secrets=$(grep -RInE '(ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|xox[baprs]-|SESSDATA=)' web --include='*.py' --include='*.cs')
+          [ -n "$paths" ] && { echo "::warning::发现硬编码绝对路径（不阻断，但请确认）"; echo "$paths"; }
+          if [ -n "$secrets" ]; then echo "::error::发现疑似凭证，阻断"; echo "$secrets"; exit 1; fi
+          echo "路径与凭证扫描完成"
+
+  backend-tests:
+    name: backend-tests
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装测试依赖
+        run: python -m pip install --quiet websocket-client numpy pillow
+
+      - name: Edge 版本
+        shell: pwsh
+        run: |
+          $edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+          if (-not (Test-Path $edge)) { throw "未找到 Edge: $edge" }
+          (Get-Item $edge).VersionInfo.ProductVersion
+
+      - name: 后端回归
+        working-directory: web/windows/controller
+        run: python test_backend.py

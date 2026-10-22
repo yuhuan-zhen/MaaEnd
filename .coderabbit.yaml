@@ -1,0 +1,29 @@
+language: zh-CN
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: true
+    base_branches:
+      - ".*"
+  path_filters:
+    - "!**/*.png"
+    - "!**/*.lock"
+    - "!assets/**"
+  path_instructions:
+    - path: "web/windows/**"
+      instructions: |
+        这是 MaaEnd 的 Web/CDP 适配层（新增目录，不属于上游 assets/Go 体系）。
+        重点看四类问题：
+        1. 进程生命周期：起停、收尸、pidfile、崩溃残留、强杀会不会丢登录态；
+        2. 窗口与视口：句柄泄漏、视口尺寸补偿、缩放/DPI 边界；
+        3. 全局热键：注册冲突、失败是否响亮、退出时是否注销；
+        4. 跨平台：非 Windows 上的分支是否优雅降级。
+        风格、命名、注释密度至多算 nit；不要建议引入新的第三方依赖。
