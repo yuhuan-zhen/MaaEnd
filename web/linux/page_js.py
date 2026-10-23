@@ -162,3 +162,95 @@ INPUT_POLICY_JS = r"""
 
 # 相对移动的锚点：策略脚本里写死 (640,360)，即 1280x720 视口的中心。
 RELATIVE_ANCHOR = (640, 360)
+
+# 抹平注入：把「网页外壳」藏掉、把画面铺满视口，让串流画面尽量等于 PC 客户端。
+# 目标不是好看，是**让上游那 650 个按 PC 1280x720 标定的模板/颜色直接可用**，
+# 从而把覆盖层缩到最小（理想：0 个结构覆盖）。
+FLATTEN_JS = r"""
+(() => {
+  const CSS = `
+    /* 云端悬浮球：容器 e4MbkW / 球体 hbU_7F。React 后加 className，只能按前缀匹配 */
+    [class*="hbU_7F"], [class*="e4MbkW"] { display: none !important; visibility: hidden !important; }
+    html, body { overflow: hidden !important; }
+    /* 串流画面铺满视口：几何和 PC 客户端 1280x720 对齐，模板不用重裁 */
+    #WelinkGameVideo { width: 100vw !important; height: 100vh !important; object-fit: fill !important; }
+    #gamePlayLayer, #WelinkGameVideo { touch-action: none !important; user-select: none !important; }
+  `;
+
+  function injectStyle() {
+    if (document.getElementById('maaend-flatten')) return;
+    const s = document.createElement('style');
+    s.id = 'maaend-flatten';
+    s.textContent = CSS;
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  const visible = e => !!(e && e.getClientRects && e.getClientRects().length &&
+      getComputedStyle(e).visibility !== 'hidden');
+
+  function hideBall() {
+    let n = 0;
+    for (const sel of ['[class*="hbU_7F"]', '[class*="e4MbkW"]']) {
+      for (const e of document.querySelectorAll(sel)) {
+        e.style.setProperty('display', 'none', 'important');
+        n++;
+      }
+    }
+    return n;
+  }
+
+  // class 没出现时的兜底：左上角 20~90px 的 fixed/absolute 小方块就是球
+  function hideBallByGeometry() {
+    let n = 0;
+    for (const e of document.querySelectorAll('div')) {
+      const st = getComputedStyle(e);
+      if (st.position !== 'fixed' && st.position !== 'absolute') continue;
+      const r = e.getBoundingClientRect();
+      if (r.width >= 20 && r.width <= 90 && r.height >= 20 && r.height <= 90 &&
+          r.left >= -60 && r.left <= 120 && r.top >= -5 && r.top <= 150) {
+        e.style.setProperty('display', 'none', 'important');
+        n++;
+      }
+    }
+    return n;
+  }
+
+  // 右下角「xx ms」延迟角标（网页端独有，PC 客户端画面里没有）
+  function hideLatency() {
+    let n = 0;
+    for (const e of document.querySelectorAll('div,span')) {
+      const t = (e.textContent || '').trim();
+      if (!/^\d{1,4}\s?ms$/i.test(t)) continue;
+      if (!visible(e)) continue;
+      const st = getComputedStyle(e);
+      if (st.position !== 'fixed' && st.position !== 'absolute') continue;
+      const r = e.getBoundingClientRect();
+      if (r.width > 240 || r.height > 120) continue;
+      if (r.left < innerWidth - 320 || r.top < innerHeight - 220) continue;
+      e.style.setProperty('display', 'none', 'important');
+      n++;
+    }
+    return n;
+  }
+
+  function apply() {
+    injectStyle();
+    const prev = window.__maaFlatten || {ball: 0, latency: 0, at: 0};
+    const ball = hideBall() || hideBallByGeometry();
+    const latency = hideLatency();
+    // 记累计值：第二轮以后元素已经是 display:none，单轮计数会回到 0，日志看着像没生效。
+    window.__maaFlatten = {ball: Math.max(prev.ball, ball), latency: Math.max(prev.latency, latency),
+                           at: prev.at + 1};
+    return ball + latency;
+  }
+
+  window.__maaFlattenApply = apply;
+  apply();
+  document.addEventListener('DOMContentLoaded', apply);
+  try {
+    new MutationObserver(apply).observe(document.documentElement,
+      {childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style']});
+  } catch (e) {}
+  setInterval(apply, 1000);
+})();
+"""

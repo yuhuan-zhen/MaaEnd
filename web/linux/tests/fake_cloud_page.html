@@ -11,6 +11,10 @@
 </style></head>
 <body>
   <div id="landing"><button id="start">开始游戏</button></div>
+  <!-- 模拟网页端外壳：悬浮球（左上，class 带 hbU_7F）+ 延迟角标（右下 23 ms） -->
+  <div id="ball" class="hbU_7F x" style="position:fixed;left:20px;top:20px;width:56px;height:56px;
+       border-radius:50%;background:#fff;z-index:9"></div>
+  <div id="lat" style="position:fixed;right:12px;bottom:8px;color:#fff;font-size:14px;z-index:9">23 ms</div>
   <div id="game">
     <video id="WelinkGameVideo" autoplay muted playsinline></video>
     <div id="gamePlayLayer"></div>

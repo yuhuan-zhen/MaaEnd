@@ -181,7 +181,7 @@ class CdpController:
             return False
 
     def install_policy(self):
-        """把输入策略注入页面（对应上游 kInputPolicy）。
+        """把页面脚本注入进去：输入策略 + 抹平（对应上游 kInputPolicy + 我们的 flatten）。
 
         两个动作缺一不可：
         - ``Page.addScriptToEvaluateOnNewDocument``：之后每次导航都自动注入；
@@ -191,17 +191,17 @@ class CdpController:
         if io is None:
             return False
         ok = False
-        try:
-            io.call("Page.addScriptToEvaluateOnNewDocument",
-                    source=page_js.INPUT_POLICY_JS)
-            ok = True
-        except Exception:
-            pass
-        try:
-            io.ev(page_js.INPUT_POLICY_JS)
-            ok = True
-        except Exception:
-            pass
+        for src in (page_js.INPUT_POLICY_JS, page_js.FLATTEN_JS):
+            try:
+                io.call("Page.addScriptToEvaluateOnNewDocument", source=src)
+                ok = True
+            except Exception:
+                pass
+            try:
+                io.ev(src)
+                ok = True
+            except Exception:
+                pass
         self.policy_installed = ok
         return ok
 

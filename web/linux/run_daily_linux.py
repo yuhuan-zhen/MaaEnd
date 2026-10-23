@@ -171,6 +171,8 @@ def main():
     ap.add_argument("--skip-in-game-check", action="store_true")
     ap.add_argument("--no-state-machine", dest="state_machine", action="store_false",
                     help="不用页面状态机启动，退回 pipeline 启动链")
+    ap.add_argument("--no-overlay", action="store_true",
+                    help="兼容性验证：只加载上游原版资源，不加载我们的覆盖层")
     ap.add_argument("--no-agent", action="store_true")
     ap.add_argument("--dry-run", action="store_true", help="只打印要跑的任务，不连控制器")
     ap.add_argument("--controller", default=os.environ.get("MAAEND_CONTROLLER", "cdp"),
@@ -218,6 +220,11 @@ def main():
     # 渲染与合成器帧有细微差异，灰度匹配分数会掉到 0.90~0.92（阈值 0.95）。
     # 这一层只在 --controller cdp 下追加，homesrv 的合成器路径不受影响。
     dirs = list(DIRS)
+    if getattr(a, "no_overlay", False):
+        # 兼容性验证模式：只加载上游原版资源，不加载我们任何覆盖层。
+        # 如果这样也能跑完，就说明「别人写的节点可以直接用」，覆盖层可以继续删。
+        dirs = dirs[:1]
+        log("[兼容性] --no-overlay：只加载 %s（不加载覆盖层）" % dirs[0])
     if a.controller == "cdp":
         _cdp_layer = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource_web_cdp")
         if os.path.isdir(_cdp_layer):
