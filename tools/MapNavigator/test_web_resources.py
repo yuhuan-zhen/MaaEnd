@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from fastapi import HTTPException
 from navmesh_backend import rope_interact_text
+
 from web import serve
 
 
