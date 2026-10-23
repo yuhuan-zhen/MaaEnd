@@ -29,7 +29,9 @@ LOG="$STATE_DIR/launcher.log"
 SHOT_DIR="${SHOT_DIR:-/mnt/d/桌面/maaend-manual}"
 
 stage="${1:-}"; shift || true
-ONLY="3,4,5"; LADDER="L3"; CONTROLLER="cdp"
+ONLY="3,4,5"; LADDER="L3"
+# compositor 模式默认走框架内置 Linux 控制器（与 MXU 一致）；headless 只能用 cdp
+if [ "$MODE" = "compositor" ]; then CONTROLLER="wlroots"; else CONTROLLER="cdp"; fi
 while [ $# -gt 0 ]; do
   case "$1" in
     --only) ONLY="$2"; shift 2 ;;
@@ -149,9 +151,10 @@ PY
     esac
     info "跑一轮：controller=$CONTROLLER only=$ONLY ladder=$LADDER"
     echo "  资源: $DIRS"
+    # shellcheck disable=SC2086
     MAAEND_DIST="$DIST" MAAEND_WEB="$WEB" MAAEND_RES_DIRS="$DIRS" \
       python3 "$WEB/linux/run_daily_linux.py" --controller "$CONTROLLER" \
-              --only "$ONLY" "${EXTRA_ARGS:-}"
+              --only "$ONLY" ${EXTRA_ARGS:-}
     ;;
 
   status)

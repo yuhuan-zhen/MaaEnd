@@ -93,6 +93,8 @@ PAGE_STATE_JS = r"""
 # 输入策略：在页面里修掉「自动化输入」这一类问题，而不是在外部加重试。
 INPUT_POLICY_JS = r"""
 (() => {
+    if (window.__maaPolicyInstalled) return 'already';
+    window.__maaPolicyInstalled = true;
     // 站点的「画质增强」在有 WebGL2 的 GPU 上会把解码后的 <video> 换成 OffscreenCanvas，
     // 取帧和键盘门控都会失效。只禁 WebGL2 这一个能力，传输方式、硬解、WebGL1、2D 拷贝都还在。
     const getContext = HTMLCanvasElement.prototype.getContext;
@@ -168,6 +170,8 @@ RELATIVE_ANCHOR = (640, 360)
 # 从而把覆盖层缩到最小（理想：0 个结构覆盖）。
 FLATTEN_JS = r"""
 (() => {
+    if (window.__maaFlattenInstalled) return 'already';
+    window.__maaFlattenInstalled = true;
   const CSS = `
     /* 云端悬浮球：容器 e4MbkW / 球体 hbU_7F。React 后加 className，只能按前缀匹配 */
     [class*="hbU_7F"], [class*="e4MbkW"] { display: none !important; visibility: hidden !important; }

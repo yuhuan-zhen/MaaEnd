@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import sys
@@ -74,9 +75,15 @@ def main() -> int:
     sess = _Sess(ws_url(port))
     sess.call("Page.enable")
     sess.call("Runtime.enable")
+    # 注入是幂等的（脚本自带守卫），但仍然吞掉异常：页面里可能已经有旧版本脚本，
+    # 重复定义 non-configurable 属性会抛 TypeError，不该让整个体检失败。
     for src in (page_js.INPUT_POLICY_JS, page_js.FLATTEN_JS):
-        sess.call("Page.addScriptToEvaluateOnNewDocument", source=src)
-        sess.ev(src)
+        with contextlib.suppress(Exception):
+            sess.call("Page.addScriptToEvaluateOnNewDocument", source=src)
+        try:
+            sess.ev(src)
+        except Exception as e:
+            print("[注入] 跳过（%s）" % str(e)[:80], flush=True)
 
     st = page_state.inspect(sess)
     if a.wait_ready:

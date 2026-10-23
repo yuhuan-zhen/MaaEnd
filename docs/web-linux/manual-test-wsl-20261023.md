@@ -13,10 +13,11 @@
 | 仓库 | `/mnt/d/maaend-upstream` |
 | launcher | `/mnt/d/UserDocuments/MaaEnd-review/launcher-draft/cloud-web-launch/cloud-web-launch-linux` |
 
+> 已经在 WSL 提示符里（`root@yuhuan`）就**不要**再敲 `wsl -d ...`，那是 Windows 侧的命令。
+
 第一步永远先确认这三件事：
 
 ```bash
-wsl -d Ubuntu-24.04
 cd /mnt/d/maaend-upstream
 ./web/linux/wsl/manual_test.sh status
 ```
@@ -72,8 +73,10 @@ shot:   1280x720，中心像素 (239,239,239) = 「开始游戏」按钮
 ./web/linux/wsl/manual_test.sh login
 ```
 
-它起来后先截一张图到 `D:\桌面\maaend-manual\login.png`。**打开那张图扫二维码**（云终末地支持扫码登录），
-之后脚本会每 3 秒打印一次页面状态，最多等 300 秒，直到 `video_ready=true`。
+它起来后先截一张图到 `D:\桌面\maaend-manual\login.png`（正常约 700 KB、1280×720；如果只有几 KB 说明页面还没渲染完）。
+**打开那张图扫二维码**（云终末地支持扫码登录），之后脚本每 3 秒打印一次页面状态，最多等 300 秒，直到 `video_ready=true`。
+
+实测（2026-10-23 23:13）：登录页 `page=landing`、`viewport=1280x720`、`dpr=1`、截图 698 KB。
 
 > 浏览器是跑在无头 sway 里的 kiosk 窗口，你的桌面上看不到它——所以登录只能靠截图扫码。
 
@@ -110,3 +113,9 @@ shot:   1280x720，中心像素 (239,239,239) = 「开始游戏」按钮
 | Chrome 起得来但窗口不在 sway 里、一帧全黑，日志末尾 `GPU process isn't usable. Goodbye.` | root + WSL 下 GPU 进程自己的 sandbox 起不来（`error_code=1002`） | compositor 模式加 `--use-angle=swiftshader --enable-unsafe-swiftshader --disable-gpu-sandbox --disable-dev-shm-usage` |
 
 第二条是硬坑：**WSL/容器里没有 GPU，必须显式走 swiftshader 且关掉 GPU 沙箱**，否则 Chrome 会在 GPU 初始化阶段直接 FATAL 退出，表现是“CDP 连得上、但合成器里没有窗口”。
+
+| 现象 | 原因 | 修法 |
+|---|---|---|
+| 真页面视口变成 **1248×591**（假页面却是 1280×720） | `fixViewport()` 里的 `Browser.setWindowBounds({windowState:"normal"})` **会退出 kiosk**，Chrome 带出标题栏 | compositor 模式只读视口、不写窗口尺寸；kiosk 本身就是输出尺寸 |
+| 第二次 attach 时报 `TypeError: Cannot redefine property: getContext` | 策略脚本把 `getContext` / `window.focus` 定义成 `configurable: false`，重复注入必炸 | 两个脚本开头加 `if (window.__maaPolicyInstalled) return;` 守卫，注入异常也不再中断体检 |
+| `./manual_test.sh: /usr/bin/env: 'bash\r': No such file or directory` | 脚本被写成 CRLF（Windows 编辑器） | `sed -i 's/\r$//' web/linux/wsl/manual_test.sh`；提交前确认 LF |
