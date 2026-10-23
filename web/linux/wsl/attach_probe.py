@@ -63,6 +63,7 @@ def main() -> int:
     ap.add_argument("--shot", help="截图保存路径（png）")
     ap.add_argument("--wait-ready", type=float, default=0, help="等 video_ready 的秒数")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--no-inject", action="store_true", help="只读状态/截图，不注入策略与抹平")
     a = ap.parse_args()
 
     port = a.port
@@ -77,7 +78,7 @@ def main() -> int:
     sess.call("Runtime.enable")
     # 注入是幂等的（脚本自带守卫），但仍然吞掉异常：页面里可能已经有旧版本脚本，
     # 重复定义 non-configurable 属性会抛 TypeError，不该让整个体检失败。
-    for src in (page_js.INPUT_POLICY_JS, page_js.FLATTEN_JS):
+    for src in () if a.no_inject else (page_js.INPUT_POLICY_JS, page_js.FLATTEN_JS):
         with contextlib.suppress(Exception):
             sess.call("Page.addScriptToEvaluateOnNewDocument", source=src)
         try:
@@ -106,7 +107,7 @@ def main() -> int:
     shot = None
     if a.shot:
         os.makedirs(os.path.dirname(os.path.abspath(a.shot)), exist_ok=True)
-        r = sess.call("Page.captureScreenshot", format="png")
+        r = sess.call("Page.captureScreenshot", format="png", fromSurface=True)
         import base64
         with open(a.shot, "wb") as f:
             f.write(base64.b64decode(r["data"]))

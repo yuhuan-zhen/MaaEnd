@@ -28,6 +28,30 @@ LAUNCH_JSON="$STATE_DIR/launch.json"
 LOG="$STATE_DIR/launcher.log"
 SHOT_DIR="${SHOT_DIR:-/mnt/d/桌面/maaend-manual}"
 
+# 代理：WSL 直连 web.hycdn.cn 只有 ~11 KB/s，账号 SDK（134 KB）要 12 秒，
+# 超过 SDK 自己的初始化超时 → 页面永远停在“页面启动未完成”。
+# 走宿主机上的代理（一般是 mihomo/clash 的 7890）能到 ~660 KB/s。
+wsl_gateway() {
+  python3 - <<'PY' 2>/dev/null
+import socket, struct
+for line in open("/proc/net/route").read().splitlines()[1:]:
+    f = line.split()
+    if f[1] == "00000000":
+        print(socket.inet_ntoa(struct.pack("<L", int(f[2], 16))))
+        break
+PY
+}
+if [ -z "${MAAEND_WEB_PROXY:-}" ]; then
+  GW=$(wsl_gateway)
+  if [ -n "$GW" ]; then
+    # 只有代理真的能通才用，避免设置不通的代理反而更慢
+    if curl -s -o /dev/null -m 3 -x "http://$GW:7890" https://web.hycdn.cn/ ; then
+      MAAEND_WEB_PROXY="http://$GW:7890"
+    fi
+  fi
+fi
+export MAAEND_WEB_PROXY
+
 stage="${1:-}"; shift || true
 ONLY="3,4,5"; LADDER="L3"
 # compositor 模式默认走框架内置 Linux 控制器（与 MXU 一致）；headless 只能用 cdp

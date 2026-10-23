@@ -297,6 +297,27 @@ def main():
         if not _conn:
             return 4
 
+    # 页面控制层：合成器截图模式下也要能问页面「现在在哪一态」。
+    # 帧仍走合成器，只有状态机/注入/页面内点击走 CDP —— 否则 --controller wlroots
+    # 会退化成依赖 pipeline 启动链（实测会卡在落地页不点「开始游戏」）。
+    page_ctl = None
+    if a.controller != "cdp":
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from cdp_controller import PageControl
+
+            _pc = PageControl(port=int(os.environ.get("MAAEND_WEB_CDP_PORT", "9334")))
+            if _pc.connect():
+                page_ctl = _pc
+                log("页面控制层: CDP 已连上（状态机可用，帧仍走合成器）")
+            else:
+                log(
+                    "[!] 页面控制层连不上 CDP（端口 %s），启动链只能回退 pipeline"
+                    % os.environ.get("MAAEND_WEB_CDP_PORT", "9334")
+                )
+        except Exception as e:
+            log("[!] 页面控制层初始化失败: %s" % str(e)[:80])
+
     tasker = Tasker()
     tasker.bind(res, ctrl)
     try:
@@ -400,10 +421,11 @@ def main():
         「现在到底卡在哪一态」；pipeline 那 9 个启动链节点仍保留作兜底
         （尤其会话中途结束、页面掉回落地页时）。
         """
-        if getattr(a, "state_machine", True) and hasattr(ctrl, "prepare_page"):
+        page_driver = page_ctl if page_ctl is not None else ctrl
+        if getattr(a, "state_machine", True) and hasattr(page_driver, "prepare_page"):
             log("  %s 页面状态机：等页面进入串流" % tag)
             try:
-                if ctrl.prepare_page(timeout=90, log=log):
+                if page_driver.prepare_page(timeout=90, log=log):
                     log("    状态机已确认进入串流，跳过 pipeline 启动链")
                     return True
             except Exception as e:

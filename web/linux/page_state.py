@@ -119,6 +119,44 @@ def click_css(sess, target: tuple[float, float]) -> bool:
         return False
 
 
+def reload_soft(sess, log: Log = _noop) -> bool:
+    """重启页面：先点页面自己的「重新加载」，点不到就无缓存破坏地 reload。
+
+    为什么要“软”重载：``web.hycdn.cn`` 上的账号 SDK 有 134 KB，弱网下第一遍
+    往往拿不完、SDK 自己超时（页面显示「页面启动未完成」），但它已经写进
+    HTTP 缓存；第二遍 reload **不清缓存** 就能秒开并初始化成功。
+    所以这里刻意不带 ignoreCache。
+    """
+    try:
+        target = sess.ev(
+            """(() => {
+              const el = [...document.querySelectorAll('button,a,div,span')]
+                .find(e => e.children.length === 0 &&
+                           /重新加载|重新载入|刷新/.test((e.textContent || '').trim()) &&
+                           e.getClientRects().length);
+              if (!el) return '';
+              const r = el.getBoundingClientRect();
+              return [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)].join(',');
+            })()"""
+        )
+    except Exception:
+        target = ""
+    if target:
+        try:
+            x, y = (float(v) for v in str(target).split(","))
+            click_css(sess, (x, y))
+            log("点了页面上的「重新加载」")
+            return True
+        except Exception:
+            pass
+    try:
+        sess.call("Page.reload")
+        log("Page.reload()（保留缓存）")
+        return True
+    except Exception:
+        return False
+
+
 def prepare(
     sess,
     log: Log = _noop,
@@ -139,6 +177,7 @@ def prepare(
       stream           → video_ready 就成功
     """
     deadline = time.time() + timeout
+    next_reload = 0.0
     login_announced = False
     last_page = ""
     epoch_seen = 0.0
@@ -164,6 +203,11 @@ def prepare(
                 log("启动资源加载失败（SDK 未就绪），等待重试")
             if on_startup_error is not None:
                 on_startup_error(st)
+            elif time.time() >= next_reload:
+                # 默认动作：软重载。弱网下第一遍把 134 KB 的账号 SDK 拉进了缓存，
+                # 第二遍就能过（实测 WSL 直连 11 KB/s 时也只有这一条路）。
+                reload_soft(sess, log)
+                next_reload = time.time() + 15.0
             time.sleep(interval)
             continue
 

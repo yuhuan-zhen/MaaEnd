@@ -452,6 +452,81 @@ class CdpController:
                 s.close()
 
 
+class PageControl:
+    """只做「页面状态机 + 注入 + 页面内输入」，不参与取帧。
+
+    给 ``--controller wlroots`` 用：帧（识别输入）走合成器截图，但「现在在哪一态、
+    怎么点开始游戏」这件事只有页面自己知道，只能问 CDP。两套控制器共用这一层，
+    启动链就不再依赖 pipeline 的那 9 个节点，也不再随控制器切换而失效。
+
+        ctl = PageControl(); ctl.connect(); ctl.prepare_page()
+    """
+
+    def __init__(self, port: int = DEFAULT_PORT, url_hint: str = "endfield"):
+        self.port = port
+        self.url_hint = url_hint
+        self._io = None
+
+    def _target_url(self) -> str:
+        ts = json.loads(urllib.request.urlopen(
+            "http://127.0.0.1:%d/json/list" % self.port, timeout=6).read())
+        pages = [
+            t for t in ts
+            if t.get("type") == "page"
+            and str(t.get("url", "")).startswith(("http://", "https://"))
+        ]
+        if self.url_hint:
+            hit = [t for t in pages if self.url_hint in (t.get("url") or "")]
+            pages = hit or pages
+        if not pages:
+            raise RuntimeError("没有 page target")
+        return pages[0]["webSocketDebuggerUrl"]
+
+    def connect(self) -> bool:
+        try:
+            self._io = _Sess(self._target_url())
+            self.install_policy()
+            return True
+        except Exception:
+            return False
+
+    def install_policy(self) -> bool:
+        io = self._io
+        if io is None:
+            return False
+        ok = False
+        for src in (page_js.INPUT_POLICY_JS, page_js.FLATTEN_JS):
+            with contextlib.suppress(Exception):
+                io.call("Page.addScriptToEvaluateOnNewDocument", source=src)
+                ok = True
+            with contextlib.suppress(Exception):
+                io.ev(src)
+                ok = True
+        return ok
+
+    def page_state(self):
+        import page_state as ps
+        if self._io is None:
+            return ps.State({"page": "unknown"})
+        return ps.inspect(self._io)
+
+    def prepare_page(self, timeout: float = 90.0, log=None) -> bool:
+        import page_state as ps
+        if self._io is None:
+            return False
+        return ps.prepare(self._io, log=log or (lambda _m: None), timeout=timeout)
+
+    def relative_move(self, dx: int, dy: int) -> bool:
+        if self._io is None:
+            return False
+        with contextlib.suppress(Exception):
+            self._io.call("Runtime.evaluate",
+                          expression="window.__maaRelativeMove(%d,%d)" % (dx, dy),
+                          returnByValue=True)
+            return True
+        return False
+
+
 def make_custom_controller(**kw):
     """构造真正可交给 MaaFw 的 CustomController 实例。"""
     from maa.controller import CustomController
