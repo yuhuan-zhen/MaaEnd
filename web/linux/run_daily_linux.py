@@ -35,6 +35,29 @@ DIRS = (
 )
 
 
+def make_linux_controller(sock: str):
+    """内置 Linux 控制器：优先新 API（LinuxController），老版本退回 WlRootsController。
+
+    LinuxController 用 JSON 配置：screencap_method/input_method = 1 即 Wlr
+    （wlr-screencopy + virtual-keyboard/pointer），与 interface.json 里
+    "linux": {"screencap": "Wlr", "input": "Wlr"} 是同一套能力。
+    """
+    try:
+        from maa.controller import LinuxController
+
+        return LinuxController({
+            "screencap_method": 1,
+            "input_method": 1,
+            "wlr_socket_path": sock,
+            "use_win32_vk_code": True,
+        })
+    except ImportError:
+        # 老版本 maafw 没有 LinuxController，退回等价的 WlRootsController
+        from maa.controller import WlRootsController
+
+        return WlRootsController(sock, use_win32_vk_code=True)
+
+
 def _find_socket():
     env = os.environ.get("WLR_SOCKET")
     if env:
@@ -252,11 +275,9 @@ def main():
 
         ctrl = make_custom_controller()
     else:
-        from maa.controller import WlRootsController
-
         # use_win32_vk_code=True：管线的动作节点用的是 Win32 虚拟键码（Alt=18），
         # 不加这个参数，18 会被当成 Linux 键码（=E）。
-        ctrl = WlRootsController(SOCK, use_win32_vk_code=True)
+        ctrl = make_linux_controller(SOCK)
     ctrl.post_connection().wait()
     _conn = getattr(ctrl, "connected", False)
     _conn = _conn() if callable(_conn) else bool(_conn)
@@ -267,9 +288,8 @@ def main():
         # CDP 连不上（浏览器没起来 / 端口没开）不能让整批任务白跑：
         # 退回合成器截图，并在日志里显式标注，避免"静默降级"看不见。
         log("[!] CDP 控制器连接失败，回退到 wlroots（合成器截图）")
-        from maa.controller import WlRootsController
-
-        ctrl = WlRootsController(SOCK, use_win32_vk_code=True)
+        # 回退路径同样走内置 Linux 控制器
+        ctrl = make_linux_controller(SOCK)
         ctrl.post_connection().wait()
         _conn = getattr(ctrl, "connected", False)
         _conn = _conn() if callable(_conn) else bool(_conn)
