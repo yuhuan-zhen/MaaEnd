@@ -2,6 +2,7 @@ package charactercontroller
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 
 	"github.com/MaaXYZ/maa-framework-go/v4"
@@ -22,6 +23,16 @@ func absInt(v int) int {
 		return -v
 	}
 	return v
+}
+
+// pitchAwareUnitsPerDegree 按水平/纵向取灵敏度。
+// 纵向尚未单独标定，暂与水平共用同一套换算；留此入口便于后续只改纵向。
+func pitchAwareUnitsPerDegree(ctx *maa.Context, horizontal bool) float64 {
+	ctrl := resolveController(ctx)
+	if horizontal {
+		return turnUnitsPerDegree(ctrl)
+	}
+	return pitchUnitsPerDegree(ctrl)
 }
 
 func rotateView(ctx *maa.Context, dx, dy int) {
@@ -131,7 +142,9 @@ func (a *CharacterControllerYawDeltaAction) Run(ctx *maa.Context, arg *maa.Custo
 		return false
 	}
 	delta := params.Delta % 360
-	dx := delta * 2 // 视角旋转灵敏度：1 度偏航对应 2 像素横向拖动
+	// 灵敏度按控制器类型取：云网页 4.0、触摸 3.0、桌面 2.0 单位/度。
+	// 见 turn_sensitivity.go 与 tools/pr6696-tests/T5i-灵敏度与上限实测.md。
+	dx := int(math.Round(float64(delta) * pitchAwareUnitsPerDegree(ctx, true)))
 	rotateView(ctx, dx, 0)
 	return true
 }
@@ -147,7 +160,7 @@ func (a *CharacterControllerPitchDeltaAction) Run(ctx *maa.Context, arg *maa.Cus
 		return false
 	}
 	delta := params.Delta % 360
-	dy := delta * 2
+	dy := int(math.Round(float64(delta) * pitchAwareUnitsPerDegree(ctx, false)))
 	rotateView(ctx, 0, dy)
 	return true
 }
