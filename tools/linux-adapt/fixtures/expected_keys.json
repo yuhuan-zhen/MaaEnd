@@ -1,0 +1,229 @@
+{
+  "source": {
+    "vk_table": "MaaFramework source/MaaLinuxControlUnit/Input/VkToEvdev.h @0fc6025c",
+    "pipeline": "MaaEnd assets/resource/pipeline",
+    "keymap": "US"
+  },
+  "totals": {
+    "references": 79,
+    "distinct": 24
+  },
+  "keys": [
+    {
+      "vk": 27,
+      "occurrences": 11,
+      "expected_evdev": "KEY_ESC",
+      "evdev_code": 1,
+      "xkb_keycode": 9,
+      "expected_keysym": "Escape",
+      "observed_if_not_translated": "KEY_RIGHTBRACE"
+    },
+    {
+      "vk": 18,
+      "occurrences": 10,
+      "expected_evdev": "KEY_LEFTALT",
+      "evdev_code": 56,
+      "xkb_keycode": 64,
+      "expected_keysym": "Alt_L",
+      "observed_if_not_translated": "KEY_E"
+    },
+    {
+      "vk": 70,
+      "occurrences": 9,
+      "expected_evdev": "KEY_F",
+      "evdev_code": 33,
+      "xkb_keycode": 41,
+      "expected_keysym": "f",
+      "observed_if_not_translated": "KEY_SCROLLLOCK"
+    },
+    {
+      "vk": 83,
+      "occurrences": 6,
+      "expected_evdev": "KEY_S",
+      "evdev_code": 31,
+      "xkb_keycode": 39,
+      "expected_keysym": "s",
+      "observed_if_not_translated": "KEY_KPDOT"
+    },
+    {
+      "vk": 16,
+      "occurrences": 4,
+      "expected_evdev": "KEY_LEFTSHIFT",
+      "evdev_code": 42,
+      "xkb_keycode": 50,
+      "expected_keysym": "Shift_L",
+      "observed_if_not_translated": "KEY_Q"
+    },
+    {
+      "vk": 87,
+      "occurrences": 4,
+      "expected_evdev": "KEY_W",
+      "evdev_code": 17,
+      "xkb_keycode": 25,
+      "expected_keysym": "w",
+      "observed_if_not_translated": "KEY_F11"
+    },
+    {
+      "vk": 164,
+      "occurrences": 4,
+      "expected_evdev": "KEY_LEFTALT",
+      "evdev_code": 56,
+      "xkb_keycode": 64,
+      "expected_keysym": "Alt_L",
+      "observed_if_not_translated": "KEY_PLAYPAUSE"
+    },
+    {
+      "vk": 65,
+      "occurrences": 3,
+      "expected_evdev": "KEY_A",
+      "evdev_code": 30,
+      "xkb_keycode": 38,
+      "expected_keysym": "a",
+      "observed_if_not_translated": "KEY_F7"
+    },
+    {
+      "vk": 68,
+      "occurrences": 3,
+      "expected_evdev": "KEY_D",
+      "evdev_code": 32,
+      "xkb_keycode": 40,
+      "expected_keysym": "d",
+      "observed_if_not_translated": "KEY_F10"
+    },
+    {
+      "vk": 82,
+      "occurrences": 3,
+      "expected_evdev": "KEY_R",
+      "evdev_code": 19,
+      "xkb_keycode": 27,
+      "expected_keysym": "r",
+      "observed_if_not_translated": "KEY_KP0"
+    },
+    {
+      "vk": 69,
+      "occurrences": 2,
+      "expected_evdev": "KEY_E",
+      "evdev_code": 18,
+      "xkb_keycode": 26,
+      "expected_keysym": "e",
+      "observed_if_not_translated": "KEY_NUMLOCK"
+    },
+    {
+      "vk": 160,
+      "occurrences": 2,
+      "expected_evdev": "KEY_LEFTSHIFT",
+      "evdev_code": 42,
+      "xkb_keycode": 50,
+      "expected_keysym": "Shift_L",
+      "observed_if_not_translated": "KEY_CLOSECD"
+    },
+    {
+      "vk": 49,
+      "occurrences": 2,
+      "expected_evdev": "KEY_1",
+      "evdev_code": 2,
+      "xkb_keycode": 10,
+      "expected_keysym": "1",
+      "observed_if_not_translated": "KEY_N"
+    },
+    {
+      "vk": 50,
+      "occurrences": 2,
+      "expected_evdev": "KEY_2",
+      "evdev_code": 3,
+      "xkb_keycode": 11,
+      "expected_keysym": "2",
+      "observed_if_not_translated": "KEY_M"
+    },
+    {
+      "vk": 51,
+      "occurrences": 2,
+      "expected_evdev": "KEY_3",
+      "evdev_code": 4,
+      "xkb_keycode": 12,
+      "expected_keysym": "3",
+      "observed_if_not_translated": "KEY_COMMA"
+    },
+    {
+      "vk": 52,
+      "occurrences": 2,
+      "expected_evdev": "KEY_4",
+      "evdev_code": 5,
+      "xkb_keycode": 13,
+      "expected_keysym": "4",
+      "observed_if_not_translated": "KEY_DOT"
+    },
+    {
+      "vk": 112,
+      "occurrences": 2,
+      "expected_evdev": "KEY_F1",
+      "evdev_code": 59,
+      "xkb_keycode": 67,
+      "expected_keysym": "F1",
+      "observed_if_not_translated": "KEY_MACRO"
+    },
+    {
+      "vk": 17,
+      "occurrences": 2,
+      "expected_evdev": "KEY_LEFTCTRL",
+      "evdev_code": 29,
+      "xkb_keycode": 37,
+      "expected_keysym": "Control_L",
+      "observed_if_not_translated": "KEY_W"
+    },
+    {
+      "vk": 32,
+      "occurrences": 1,
+      "expected_evdev": "KEY_SPACE",
+      "evdev_code": 57,
+      "xkb_keycode": 65,
+      "expected_keysym": "space",
+      "observed_if_not_translated": "KEY_D"
+    },
+    {
+      "vk": 48,
+      "occurrences": 1,
+      "expected_evdev": "KEY_0",
+      "evdev_code": 11,
+      "xkb_keycode": 19,
+      "expected_keysym": "0",
+      "observed_if_not_translated": "KEY_B"
+    },
+    {
+      "vk": 113,
+      "occurrences": 1,
+      "expected_evdev": "KEY_F2",
+      "evdev_code": 60,
+      "xkb_keycode": 68,
+      "expected_keysym": "F2",
+      "observed_if_not_translated": "KEY_MUTE"
+    },
+    {
+      "vk": 114,
+      "occurrences": 1,
+      "expected_evdev": "KEY_F3",
+      "evdev_code": 61,
+      "xkb_keycode": 69,
+      "expected_keysym": "F3",
+      "observed_if_not_translated": "KEY_VOLUMEDOWN"
+    },
+    {
+      "vk": 115,
+      "occurrences": 1,
+      "expected_evdev": "KEY_F4",
+      "evdev_code": 62,
+      "xkb_keycode": 70,
+      "expected_keysym": "F4",
+      "observed_if_not_translated": "KEY_VOLUMEUP"
+    },
+    {
+      "vk": 75,
+      "occurrences": 1,
+      "expected_evdev": "KEY_K",
+      "evdev_code": 37,
+      "xkb_keycode": 45,
+      "expected_keysym": "k",
+      "observed_if_not_translated": "KEY_KP4"
+    }
+  ]
+}
