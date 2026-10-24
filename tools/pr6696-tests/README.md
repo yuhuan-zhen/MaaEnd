@@ -69,6 +69,26 @@ python3 t7_env_pack.py --check-frames                # 汇总成一份证据包
 | 长时运行（>1h）的内存与 fd 稳定性 | 需要专门的浸泡测试 |
 | JPEG 对识别的最终结论 | t2 只产素材与清单，最终判定要跑 `pnpm test` 回归 |
 
+## 从 Windows 宿主机调 WSL 跑脚本的坑
+
+在 git-bash 里这样调用时，**单引号并不能保护 `$VAR` 与 `$(...)`**——宿主 shell 会先展开它们，
+WSL 里拿到的是空串。表现为日志文件名变成 `LOG=`、重定向报 `: No such file or directory`，
+而 `timeout` 那层还返回 0，看起来像"跑完了但没输出"。
+
+```bash
+# 错：$LOG 与 $(date) 在宿主侧就被吃掉
+wsl.exe -d Ubuntu-24.04 -- bash -c 'LOG="evidence/x-$(date +%s).log"; python3 t.py > "$LOG"'
+
+# 对：用字面量文件名，时间戳交给宿主管
+wsl.exe -d Ubuntu-24.04 -- bash -c 'python3 t.py > evidence/t5j-10rounds.log 2>&1; echo exit=$?'
+```
+
+另外两条相关约定：
+
+- Python 的 stdout 重定向到文件时是**块缓冲**，`tail` 会长时间看到空文件；要么加 `python3 -u`，
+  要么等进程结束后再读。
+- `pgrep -af <名字>` 会匹配到执行它的那条 shell 命令行本身，判断"是否还在跑"时要把这一行排除。
+
 ## 结果怎么用
 
 1. `python3 t7_env_pack.py --check-frames` → 得到 `pr6696-evidence-pack.zip`
