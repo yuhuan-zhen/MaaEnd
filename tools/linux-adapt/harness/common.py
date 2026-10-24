@@ -26,7 +26,12 @@ def default_wlr_socket() -> str:
     display = os.environ.get("WAYLAND_DISPLAY") or "wayland-0"
     if display.startswith("/"):
         return display
-    runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if not runtime:
+        # Windows 没有 os.getuid（这里只是为了让「导入/静态检查」不崩，
+        # 真正的验收脚本只在 Linux 上跑）。
+        uid = os.getuid() if hasattr(os, "getuid") else 0
+        runtime = f"/run/user/{uid}"
     return os.path.join(runtime, display)
 
 

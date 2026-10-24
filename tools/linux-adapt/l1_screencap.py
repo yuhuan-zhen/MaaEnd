@@ -3,23 +3,27 @@
 
 只读，不注入任何输入。
 
-判定 8 项（全部为 True 才算通过）：
+判定 8 项（全为 True 才算通过）：
   1. connect           连上 sway（Wayland 合成器）
   2. shape_1280x720    帧尺寸是 1280x720，不依赖 MaaControllerGetResolution
   3. shape_hw3         形如 (720, 1280, 3)
   4. not_blank         不是黑帧 / 纯色
   5. stable            静止画面 20 帧的帧间均值标准差 < 2.0
   6. fast_enough       单帧耗时中位数 < 500 ms
-  7. matches_grim      与 grim 参考帧的 NCC > 0.90
-  8. bgr_confirmed     BGR->RGB 的 NCC 高于按 RGB 直用
+  7. matches_grim      与 grim 参考帧的 NCC > 0.90     ← 缺 grim 时 SKIP
+  8. bgr_confirmed     BGR->RGB 的 NCC 高于按 RGB 直用  ← 缺 grim 时 SKIP
 
 记录项（不参与判定）：
   resolution_api  MaaControllerGetResolution 的返回值；Linux 控制器当前返回 (0, 0)
   start_app       上游 LinuxControlUnit 的启停实现状态；本层不探测
 
+SKIP 与 FAIL 的区别：grim 缺失属于「没做这项验证」，不是「验证失败」，所以写 None
+而不是 False；但被跳过的项会显式打印，且汇总里带上 skipped 计数，避免「分母变小所以更绿」。
+需要严格时用 --require-grim，缺 grim 直接 exit 1。
+
 用法：
     XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
-      python3 l1_screencap.py [--socket /run/user/0/wayland-1] [--n 20]
+      python3 l1_screencap.py [--socket /run/user/0/wayland-1] [--n 20] [--require-grim]
 """
 
 from __future__ import annotations
@@ -53,6 +57,8 @@ def main() -> int:
                     help="Wayland socket；默认 $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY")
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--out", default="evidence-l1")
+    ap.add_argument("--require-grim", action="store_true",
+                    help="grim 不可用时直接失败；默认只跳过两项交叉验证")
     args = ap.parse_args()
 
     out_dir = Path(__file__).parent / args.out
@@ -97,9 +103,14 @@ def main() -> int:
     }
     print(f"[info] resolution(API) = {res_api}  （记录项，不判定）")
 
-    # --- 参考帧（grim） ---
+    # --- 参考帧（grim），必须在抓帧循环之前，避免和截图抢合成器 ---
     grim_path = out_dir / "ref-grim.png"
     has_grim = grim_capture(grim_path)
+    if not has_grim and args.require_grim:
+        print("[FAIL] --require-grim 已指定，但 grim 不可用")
+        result["error"] = "grim unavailable (required)"
+        (out_dir / "l1.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return 1
 
     # --- 抓 n 帧 ---
     frames: list[np.ndarray] = []
@@ -152,6 +163,8 @@ def main() -> int:
             result["grim_shape_mismatch"] = True
     else:
         result["grim"] = "unavailable"
+        print("[skip] 未找到 grim：matches_grim / bgr_confirmed 跳过")
+        print("       安装后重跑可获得通道序的独立验证：sudo apt install grim")
 
     # --- 判定 ---
     checks = result["checks"]
@@ -164,15 +177,25 @@ def main() -> int:
     if "ncc_bgr2rgb" in result:
         checks["matches_grim"] = result["ncc_bgr2rgb"] > 0.90
         checks["bgr_confirmed"] = result["ncc_bgr2rgb"] > result["ncc_as_is"]
+    else:
+        checks["matches_grim"] = None
+        checks["bgr_confirmed"] = None
+        result["skipped"] = ["matches_grim", "bgr_confirmed"]
 
-    result["ok"] = all(checks.values())
+    judged = {k: v for k, v in checks.items() if v is not None}
+    result["ok"] = all(judged.values())
+    result["passed"] = sum(1 for v in judged.values() if v)
+    result["judged"] = len(judged)
     (out_dir / "l1.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
 
     print("\n=== L1 判定 ===")
     for k, v in checks.items():
-        print(f"  [{'PASS' if v else 'FAIL'}] {k}")
+        mark = "SKIP" if v is None else ("PASS" if v else "FAIL")
+        print(f"  [{mark}] {k}")
+    skipped = len(checks) - len(judged)
     print(f"\nL1_{'OK' if result['ok'] else 'NG'}  "
-          f"passed={sum(checks.values())}/{len(checks)}")
+          f"passed={result['passed']}/{len(judged)}"
+          + (f" (skipped={skipped})" if skipped else ""))
     return 0 if result["ok"] else 2
 
 
