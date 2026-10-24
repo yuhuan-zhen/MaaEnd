@@ -10,7 +10,7 @@
 
 | 层 | 内容 | 状态 |
 | --- | --- | --- |
-| L1 帧源 | `WlrScreencap` 帧正确性 / 通道序 / 耗时 | ✅ 已验收（8 项判定全过；另有 2 项记录项） |
+| L1 帧源 | `WlrScreencap` 帧正确性 / 通道序 / 耗时 | ✅ 已验收（8 项判定全过；另有 2 项记录项；缺 grim 时 2 项标 SKIP 并计数） |
 | L2 输入原语 | 策略注入（复用 #6746 `kInputPolicy`）+ 点击/悬停/拖动/键盘/滚轮/相对移动的页面级可见性 | 待开始 |
 | L3 节点契约 | `resource_linux` 四个私有节点的实现形式 | 待开始 |
 | L4 Go 动作 | 默认**不加平台分支**（与 #6746 一致，靠资源层选实现） | 待开始 |
@@ -44,6 +44,7 @@
 | `--socket` 默认值由 `$XDG_RUNTIME_DIR` + `$WAYLAND_DISPLAY` 推导 | 写死 `/run/user/0/wayland-1` 换用户/换显示实例就错 |
 | `resolution` 从判定项改为**记录项**（`resolution_api`），尺寸判定只用帧 shape | 原写法用 `or` 兜底让它恒真，把「上游 API 未补全」这个事实藏住了 |
 | 新增记录项 `start_app`（`probed: false`） | 上游仍是 `TODO`，本层不调用，只留事实给 L5 |
+| 缺 grim 时两项判定写 `None`（SKIP）而非从 `checks` 删除；汇总带 `skipped=N`；新增 `--require-grim` | 原写法直接从 `checks` 删掉，分母变小 → `6/6` 比 `6/8` 更绿，覆盖面缩水被藏起来；严格模式用于出交付证据的场合 |
 
 判定项仍是 8 项，通过率口径不变；注释版同步重建（`study/l1_screencap_annotated.py` 290 行、`study/harness_common_annotated.py` 110 行，两份 AST 均与源文件一致）。
 
@@ -65,6 +66,10 @@ git -c http.proxy=http://127.0.0.1:7890 fetch origin v2
 # L1 验收（只读截图，不注入输入）
 XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
   uv run python tools/linux-adapt/l1_screencap.py --n 20
+
+# 严格模式：缺 grim 直接失败（出交付证据时用）
+XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
+  uv run python tools/linux-adapt/l1_screencap.py --n 20 --require-grim
 ```
 
 本机 WSL 未安装 uv（`requires-python >= 3.14`，`.python-version` 固定 3.14），L1 证据是用 WSL 系统 Python 3.12 + 已装好的 `maafw 5.14.3 / numpy 2.5.4 / pillow 13.0.0` 跑出的，依赖版本与锁文件一致：

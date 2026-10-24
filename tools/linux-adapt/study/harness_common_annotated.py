@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pyright: reportMissingImports=false, reportMissingModuleSource=false  # 讲解副本：依赖（maa/numpy/pillow）不在阅读环境的解释器里，静音导入告警
 """L1 / L2 共用的验收工具。
 
 抽出来的理由：L1（帧源）与 L2（输入原语）都要「比两张图像不像」「把帧落盘」
@@ -30,16 +31,18 @@ from __future__ import annotations
 
 # 读 $XDG_RUNTIME_DIR / $WAYLAND_DISPLAY。
 import os
+
 # 调 grim 这个外部命令。
 import subprocess
+
 # 路径对象；grim 需要 str 参数，所以调用处会 str()。
 from pathlib import Path
 
 # 矩阵运算：均值、点积、翻转通道。
 import numpy as np
+
 # 只用于落盘（Image.fromarray）。
 from PIL import Image
-
 
 
 # ---------------------------------------------------------------------------
@@ -52,13 +55,17 @@ def default_wlr_socket() -> str:
     两个环境变量任一缺失时回退到 root + wayland-0，与上游文档的示例一致。
     WAYLAND_DISPLAY 是绝对路径时直接用它（Wayland 允许这么写）。
     """
-# WAYLAND_DISPLAY 允许是绝对路径，那种情况直接返回，不再拼 runtime 目录。
+    # WAYLAND_DISPLAY 允许是绝对路径，那种情况直接返回，不再拼 runtime 目录。
     display = os.environ.get("WAYLAND_DISPLAY") or "wayland-0"
     if display.startswith("/"):
         return display
-    runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if not runtime:
+        # Windows 没有 os.getuid（这里只是为了让「导入/静态检查」不崩，
+        # 真正的验收脚本只在 Linux 上跑）。
+        uid = os.getuid() if hasattr(os, "getuid") else 0
+        runtime = f"/run/user/{uid}"
     return os.path.join(runtime, display)
-
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +74,7 @@ def default_wlr_socket() -> str:
 # ---------------------------------------------------------------------------
 def ncc(a: np.ndarray, b: np.ndarray) -> float:
     """归一化互相关（灰度、零均值）：1 表示完全一致，0 表示毫无关系。"""
-# 转 float64 再算，避免 uint8 相减溢出（0-255 会绕回 255）。
+    # 转 float64 再算，避免 uint8 相减溢出（0-255 会绕回 255）。
     a = a.astype(np.float64).ravel()
     b = b.astype(np.float64).ravel()
     a -= a.mean()
@@ -80,7 +87,6 @@ def ncc(a: np.ndarray, b: np.ndarray) -> float:
 def channel_means(img: np.ndarray) -> list[float]:
     """三个通道各自的均值，用来快速看通道序是不是反了。"""
     return [round(float(img[:, :, i].mean()), 3) for i in range(img.shape[2])]
-
 
 
 # ---------------------------------------------------------------------------
