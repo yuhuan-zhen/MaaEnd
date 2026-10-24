@@ -22,7 +22,6 @@ DST = HERE / "mini-cpp" / "l2_task_annotated.cpp"
 # 行尾注释：(代码子串, 注释)
 INLINE: list[tuple[str, str]] = [
     ('#include "MaaFramework/MaaAPI.h"', "唯一的公开总头，实例/工具/全局都在里面"),
-    ("constexpr int kWlrMethod = 1;", "MaaLinuxScreencapMethod_WlrScreencap / Input_WlrInput 都是 1"),
     ("constexpr const char* kEntry =", "任务入口节点名，必须存在于资源里"),
     ("void log_info(const char* fmt, ...)", "SDK 不带 MaaUtils，独立宿主只能自己打日志"),
     ("    va_list args;", "C 风格可变参：先 va_start，再 vprintf，最后 va_end"),
@@ -69,7 +68,7 @@ INLINE: list[tuple[str, str]] = [
 ABOVE: list[tuple[str, str]] = [
     ("// 本层引入两个新句柄", ""),  # 占位，避免空列表
     ("namespace\n", ""),
-    ("constexpr int kWlrMethod", "四个常量：方法枚举、默认 socket、入口节点名、两个节点名"),
+    ("constexpr const char* kDefaultSocketPath", "常量：默认 socket、入口节点名、两个节点名（方法枚举改用 SDK 宏）"),
     ("void log_info", "两个日志函数：一个走 stdout 前缀 INFO，一个前缀 ERR"),
     ("const char* status_name(", "MaaStatus 是 int32_t，只有五个取值"),
     ("template <typename Handle", "句柄守卫：把「析构即销毁」抽成模板，五种句柄共用"),

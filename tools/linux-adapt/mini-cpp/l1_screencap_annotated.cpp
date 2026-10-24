@@ -29,11 +29,10 @@
 namespace mini
 {
 
-// 截图与输入方式的枚举值，见 MaaDef.h 的 MaaLinuxScreencapMethod / MaaLinuxInputMethod。
-// Wlr 截图方式的枚举值（MaaDef.h：None=0, Wlr=1, ExtImage=2, PipeWire=4）。
-constexpr int kScreencapMethodWlr = 1;
-// Wlr 输入方式的枚举值（None=0, Wlr=1, UInput=2, Libei=4）。L1 只抓帧，但 config 要求两项都填。
-constexpr int kInputMethodWlr = 1;
+// 截图与输入方式直接用 SDK 的枚举宏：
+// MaaDef.h:491 `MaaLinuxScreencapMethod_Wlr 1ULL`、:509 `MaaLinuxInputMethod_Wlr 1ULL`。
+// 不抄字面量的理由：这两套枚举是位掩码（ExtImage=1<<1, PipeWire=1<<2），
+// 上游调位序时字面量不会报错，只会静默连成另一种方式。
 
 // 嵌套 sway 的 socket。wayland-0 被 WSLg 占用，所以嵌套实例是 wayland-1。
 // 默认 socket。嵌套 sway 会占 wayland-1，因为 wayland-0 已被 WSLg 自己的合成器占用。
@@ -232,8 +231,8 @@ std::string build_config_json(const std::string& socket_path)
     std::string json = "{";
     // screencap_method / input_method 是必填；这里都填 Wlr。
     // 转义 \" 是因为 JSON 的键必须带引号，而这个字符串本身是 C++ 字面量。
-    json += "\"screencap_method\": " + std::to_string(kScreencapMethodWlr) + ",";
-    json += "\"input_method\": " + std::to_string(kInputMethodWlr) + ",";
+    json += "\"screencap_method\": " + std::to_string(MaaLinuxScreencapMethod_Wlr) + ",";
+    json += "\"input_method\": " + std::to_string(MaaLinuxInputMethod_Wlr) + ",";
     json += "\"wlr_socket_path\": \"" + socket_path + "\",";
     // use_win32_vk_code：L1 用不到按键，但保持与 L0 一致，
     // 将来接 L3 的 pipeline 时不会因为漏了这个字段而按键错位。

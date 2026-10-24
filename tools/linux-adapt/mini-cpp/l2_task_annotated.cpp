@@ -14,8 +14,7 @@
 namespace
 {
 
-// 四个常量：方法枚举、默认 socket、入口节点名、两个节点名
-constexpr int kWlrMethod = 1;  // MaaLinuxScreencapMethod_WlrScreencap / Input_WlrInput 都是 1
+// 常量：默认 socket、入口节点名、两个节点名（方法枚举改用 SDK 宏）
 constexpr const char* kDefaultSocketPath = "/run/user/0/wayland-1";
 constexpr const char* kEntry = "L2Click";  // 任务入口节点名，必须存在于资源里
 constexpr const char* kNodeClick = "L2Click";
@@ -101,8 +100,8 @@ using ScopedStringList = ScopedHandle<MaaStringListBuffer, MaaStringListBufferDe
 // 拼 controller 的 config_json
 std::string build_config_json(const std::string& socket_path)  // config_json 是字符串而非结构体：加字段不破坏 ABI
 {
-    return std::string("{\"screencap_method\":") + std::to_string(kWlrMethod) + ",\"input_method\":" + std::to_string(kWlrMethod)  // 只拼必填三项 + 一个显式开关
-           + ",\"wlr_socket_path\":\"" + socket_path + "\"" + ",\"use_win32_vk_code\":true}";
+    return std::string("{\"screencap_method\":") + std::to_string(MaaLinuxScreencapMethod_Wlr) + ",\"input_method\":"  // 只拼必填三项 + 一个显式开关
+           + std::to_string(MaaLinuxInputMethod_Wlr) + ",\"wlr_socket_path\":\"" + socket_path + "\"" + ",\"use_win32_vk_code\":true}";
 }
 
 // 事件回调：MaaFramework 通过 sink 把节点级事件推给我们。

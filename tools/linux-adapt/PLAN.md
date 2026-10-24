@@ -184,7 +184,7 @@ C++ 主线的三条硬要求（与工具的分界线就在这里）：
 | 参考 | `[FW-2.2]`（`MaaTaskerCreate` / `MaaResourcePostBundle` / `MaaTaskerPostTask`）`[FW-3.1]`（节点字段）`[FW-2.3]`（节点级/任务级消息列表） |
 | 卡点 | ① 资源路径要指向**包含 `pipeline`/`image`/`model` 的目录**，指到 `pipeline` 子目录会加载到 0 个节点 ② Tasker 未绑 Controller 就跑任务会失败 ③ **节点级事件只走 `MaaTaskerAddContextSink`**，只挂 `AddSink` 收不到 `Node.*`（实测 2 vs 16）④ `pipeline_override` 传 `""` 会静默不执行 |
 | 验收 | ✅ 资源 2 节点；任务 `Succeeded`；执行轨迹 2 节点均 `completed=1`；任务级事件 2 条 / 节点级 16 条 |
-| 产物 | [`mini-cpp/l2_task.cpp`](mini-cpp/l2_task.cpp) + [`l2_task_annotated.cpp`](mini-cpp/l2_task_annotated.cpp)（预处理 md5 `56bebdbb…` 一致）+ [`l2-resource/`](mini-cpp/l2-resource) + [`study/L2-详读.md`](study/L2-详读.md) + [`verify-l2.sh`](verify-l2.sh) |
+| 产物 | [`mini-cpp/l2_task.cpp`](mini-cpp/l2_task.cpp) + [`l2_task_annotated.cpp`](mini-cpp/l2_task_annotated.cpp)（预处理 md5 `5a08a975…` 一致）+ [`l2-resource/`](mini-cpp/l2-resource) + [`study/L2-详读.md`](study/L2-详读.md) + [`verify-l2.sh`](verify-l2.sh) |
 
 ### L3 CustomController 骨架（~180 行）
 

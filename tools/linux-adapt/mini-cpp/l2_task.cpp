@@ -95,8 +95,8 @@ using ScopedStringList = ScopedHandle<MaaStringListBuffer, MaaStringListBufferDe
 
 std::string build_config_json(const std::string& socket_path)
 {
-    return std::string("{\"screencap_method\":") + std::to_string(MaaLinuxScreencapMethod_Wlr) + ",\"input_method\":" + std::to_string(MaaLinuxInputMethod_Wlr)
-           + ",\"wlr_socket_path\":\"" + socket_path + "\"" + ",\"use_win32_vk_code\":true}";
+    return std::string("{\"screencap_method\":") + std::to_string(MaaLinuxScreencapMethod_Wlr) + ",\"input_method\":"
+           + std::to_string(MaaLinuxInputMethod_Wlr) + ",\"wlr_socket_path\":\"" + socket_path + "\"" + ",\"use_win32_vk_code\":true}";
 }
 
 // 事件回调：MaaFramework 通过 sink 把节点级事件推给我们。

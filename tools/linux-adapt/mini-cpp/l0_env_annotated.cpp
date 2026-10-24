@@ -93,7 +93,7 @@ public:
     ~ScopedController()
     {
         // 判空是防御，不是因为它会崩：MaaControllerDestroy 自己就判空
-        //（MaaFramework.cpp:341-349，空句柄只打一行 LogError 就返回，不会崩）。
+        // （MaaFramework.cpp:341-349，空句柄只打一行 LogError 就返回，不会崩）。
         // 这里判空的收益是：不往 maa.log 里塞无意义的 "handle is null"，
         // 且把「句柄可能为空」这条不变量留在本地，读代码时不用翻上游。
         if (handle_ != nullptr) {
@@ -125,8 +125,8 @@ std::string build_config_json(const std::string& socket_path)
     std::string json;
     json += "{";
     // std::to_string 把 int 转成字符串，避免手写 "1" 这种魔法字符串。
-    json += "\"screencap_method\": " + std::to_string(kScreencapMethodWlr) + ",";
-    json += "\"input_method\": " + std::to_string(kInputMethodWlr) + ",";
+    json += "\"screencap_method\": " + std::to_string(MaaLinuxScreencapMethod_Wlr) + ",";
+    json += "\"input_method\": " + std::to_string(MaaLinuxInputMethod_Wlr) + ",";
     // socket 路径用引号包住，拼进 JSON 字符串。
     json += "\"wlr_socket_path\": \"" + socket_path + "\",";
     // use_win32_vk_code：true 表示上层传进来的键码按 Win32 VK 解释（27 = Esc）。
