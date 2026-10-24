@@ -1,0 +1,74 @@
+# CMakeLists.txt 逐行注释版（与 CMakeLists.txt 语义完全相同，只多了注释）
+#
+# 这份文件的作用：把 l0_env.cpp 编译成可执行文件，并链接 MaaFramework。
+# CMake 的注释以 # 开头，行内也可以跟在命令后面。
+#
+# 三个 CMake 概念先说明：
+#   - target（目标）：一个要构建出来的东西，这里是可执行文件 l0_env。
+#   - 属性（property）：挂在 target 上的配置，比如运行期库搜索路径。
+#   - config 包：别人（这里是 MaaFramework SDK）提供的 <Name>Config.cmake，
+#     让 find_package 能直接找到头文件路径和库路径，不用手写 -I / -L。
+
+# 要求 CMake 至少 3.20。理由：project(... LANGUAGES ...) 与 target_link_libraries
+# 的新行为在这个版本已稳定，再低的版本会有兼容告警。
+cmake_minimum_required(VERSION 3.20)
+
+# 定义工程名与语言。LANGUAGES CXX 表示只启用 C++ 编译器，
+# 不启用 C / Fortran，避免 CMake 去找用不到的编译器。
+project(maaend_linux_adapt_l0 LANGUAGES CXX)
+
+# 使用 C++20。我们的代码用了 constexpr、explicit operator bool 等特性，
+# C++17 也够，但 MaaEnd 的 cpp-algo 用 C++20，这里保持一致，方便日后搬过去。
+set(CMAKE_CXX_STANDARD 20)
+
+# 要求编译器必须支持上面指定的标准；不支持就报错，而不是悄悄降级。
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 关闭编译器扩展（如 gnu++20）。理由：可移植性，且能提前发现「只在 GCC 上成立」的写法。
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# 如果用户没有通过 -DMAAFW_SDK_DIR=... 指定 SDK 位置，就用本机已经解包的这份。
+# SDK 目录的要求：含 include/、bin/、share/cmake/ 三个子目录。
+if(NOT DEFINED MAAFW_SDK_DIR)
+    set(MAAFW_SDK_DIR "/opt/maafw/extract")
+endif()
+
+# 提前检查 SDK 是否存在。为什么要在配置阶段就检查：
+# 否则错误会推迟到编译阶段，表现成「找不到 MaaFramework/MaaAPI.h」，
+# 容易被误判成「我代码写错了」。
+if(NOT EXISTS "${MAAFW_SDK_DIR}/include/MaaFramework/MaaAPI.h")
+    # FATAL_ERROR 会立刻终止 CMake 配置并打印这条信息。
+    message(FATAL_ERROR "找不到 MaaFramework SDK：${MAAFW_SDK_DIR}\n"
+                        "请用 -DMAAFW_SDK_DIR=<包含 include 与 bin 的目录> 指定")
+endif()
+
+# 直接链 .so，不走 find_package。
+# 原因：release 包只带 MaaFramework / MaaAgentServer 两个 CMake config，
+# 而 MaaFramework 的导入目标把 MaaUtils / OpenCV / ONNXRuntime 声明为
+# link-dependent 依赖，它们的 config 不在包里 → CMake 生成阶段直接报错。
+# 直接链 .so 不需要那些 config：libMaaFramework.so 自身的 DT_NEEDED
+# 已记录 opencv_world / onnxruntime / MaaUtils，运行时由 RPATH 解析。
+#
+# 四个指令各管一件事：
+#   add_executable           声明目标与源文件
+#   target_include_directories 头文件搜索路径（等价于 -I）
+#   target_link_directories    库文件搜索路径（等价于 -L）
+#   target_link_libraries      要链的库名（等价于 -lMaaFramework）
+add_executable(l0_env l0_env.cpp)
+target_include_directories(l0_env PRIVATE "${MAAFW_SDK_DIR}/include")
+target_link_directories(l0_env PRIVATE "${MAAFW_SDK_DIR}/bin")
+target_link_libraries(l0_env PRIVATE MaaFramework)
+
+# 设置运行期库搜索路径（RPATH）。
+# 为什么需要：libMaaFramework.so 在 ${MAAFW_SDK_DIR}/bin 下，不在系统库目录里；
+# 而 Linux 控制器的 ControlUnit 是独立 .so，由框架在运行期 dlopen，
+# 所以 bin 目录必须在动态链接器能搜到的地方。
+#   BUILD_RPATH   —— 构建目录里产出的可执行文件用这个
+#   INSTALL_RPATH —— cmake --install 之后用这个
+set_target_properties(l0_env PROPERTIES
+    BUILD_RPATH "${MAAFW_SDK_DIR}/bin"
+    INSTALL_RPATH "${MAAFW_SDK_DIR}/bin")
+
+# 打开告警。-Wall 常用告警；-Wextra 更多；-Wpedantic 严格按标准检查。
+# 目的：让「不合规范的写法」在编译期就暴露，而不是运行期出怪现象。
+target_compile_options(l0_env PRIVATE -Wall -Wextra -Wpedantic)

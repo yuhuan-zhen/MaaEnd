@@ -16,11 +16,16 @@ if(NOT EXISTS "${MAAFW_SDK_DIR}/include/MaaFramework/MaaAPI.h")
                         "请用 -DMAAFW_SDK_DIR=<包含 include 与 bin 的目录> 指定")
 endif()
 
-list(APPEND CMAKE_PREFIX_PATH "${MAAFW_SDK_DIR}")
-find_package(MaaFramework CONFIG REQUIRED)
-
+# 直接链 .so，不走 find_package。
+# 原因：release 包只带 MaaFramework / MaaAgentServer 两个 CMake config，
+# 而 MaaFramework 的导入目标把 MaaUtils / OpenCV / ONNXRuntime 声明为
+# link-dependent 依赖，它们的 config 不在包里 → CMake 生成阶段直接报错。
+# 直接链 .so 不需要那些 config：libMaaFramework.so 自身的 DT_NEEDED
+# 已记录 opencv_world / onnxruntime / MaaUtils，运行时由 RPATH 解析。
 add_executable(l0_env l0_env.cpp)
-target_link_libraries(l0_env PRIVATE MaaFramework::MaaFramework)
+target_include_directories(l0_env PRIVATE "${MAAFW_SDK_DIR}/include")
+target_link_directories(l0_env PRIVATE "${MAAFW_SDK_DIR}/bin")
+target_link_libraries(l0_env PRIVATE MaaFramework)
 
 # 运行时库路径：Linux 控制器的 ControlUnit 是独立 .so，由框架在运行期 dlopen，
 # 因此 bin 目录必须在动态链接器能搜到的地方（RPATH 或 LD_LIBRARY_PATH）。

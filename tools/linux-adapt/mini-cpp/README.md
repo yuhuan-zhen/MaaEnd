@@ -40,13 +40,28 @@ sudo apt-get update && sudo apt-get install -y build-essential cmake
 #    C:\Users\23983\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_*\mingw64\bin\g++.exe
 ```
 
-## 编译（工具链就位后）
+## 编译（工具链已装好）
 
 ```bash
 cd tools/linux-adapt/mini-cpp
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
+
+**一处与官方 sample 不同**：官方 sample 用 `find_package(MaaFramework CONFIG REQUIRED)` + `MaaFramework::MaaFramework`，
+在本机这个 release 包上会失败——包内只有 `MaaFramework` / `MaaAgentServer` 两个 CMake config，
+而导入目标把 `MaaUtils` / OpenCV / ONNXRuntime 声明为 link-dependent 依赖，它们的 config 不在包里，
+CMake 生成阶段直接报「A find_package call is missing for an IMPORTED target」。
+
+所以改成直接链 `.so`：
+
+```cmake
+target_include_directories(l0_env PRIVATE "${MAAFW_SDK_DIR}/include")
+target_link_directories(l0_env PRIVATE "${MAAFW_SDK_DIR}/bin")
+target_link_libraries(l0_env PRIVATE MaaFramework)
+```
+
+`libMaaFramework.so` 的 `DT_NEEDED` 已记录那些依赖库，运行时由 RPATH 解析（实测 `ldd` 0 个 not found）。
 
 ## 运行
 
@@ -59,17 +74,18 @@ XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
 
 也可以不传参数，默认就是 `/run/user/0/wayland-1`。
 
-## 预期输出
+## 预期输出（实测）
 
 ```text
 [INFO] MaaFramework version: v5.14.3
 [INFO] config: {"screencap_method": 1,"input_method": 1,"wlr_socket_path": "/run/user/0/wayland-1","use_win32_vk_code": true}
 [INFO] controller created
 [INFO] connected = true
-[INFO] resolution = 0x0
+[INFO] resolution unavailable
 ```
 
-`resolution = 0x0` **是正常的**：Linux 控制器的 `MaaControllerGetResolution` 尚未实现（见 `docs/01`）。
+`resolution unavailable` **是正常的**：Linux 控制器的 `MaaControllerGetResolution` 返回 `MaaBool` false（API 未实现）。
+Python binding 的 `controller.resolution` 属性忽略这个 false，所以那边看到的是 `(0, 0)` —— 两者说的是同一件事。
 
 ## 判据
 
@@ -96,5 +112,6 @@ XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
 | --- | --- |
 | 语法检查（真实 12 个头文件，`-Wall -Wextra -Wpedantic`） | `SYNTAX_OK`，零警告 |
 | 注释版与原文一致性（预处理后 md5） | 两个文件 `0c509be8…` 完全相同 → 只差注释 |
-| 实际编译链接 | **未验证**（WSL 无工具链） |
-| 实际运行连接 | **未验证**（依赖上一条） |
+| 实际编译（g++ 13.3.0 + CMake 3.28.3 + Ninja 1.11.1） | **通过**，`[2/2] Linking CXX executable l0_env` |
+| 实际运行（嵌套 sway，socket `wayland-1`） | **通过**：`version v5.14.3` → `controller created` → `connected = true` → 退出码 0 |
+| ControlUnit 运行期依赖 | `libpipewire-0.3.so.0`、`libei.so.1`、`libwayland-client.so.0`、`libxkbcommon.so.0` 本机齐全 |
