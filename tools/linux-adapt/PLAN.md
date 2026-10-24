@@ -84,6 +84,13 @@
 # 直连 github 不通，需走本机代理
 git -c http.proxy=http://127.0.0.1:7890 fetch origin v2
 
-# 验收脚本运行环境
-XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 python3 <script>
+# 仓库口径（默认组 scripts + dev 已含 numpy / pillow / maafw）
+XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
+  uv run python tools/linux-adapt/<script>.py
+
+# 本机 WSL 无 uv，用系统 Python 3.12 + 已装的等价版本依赖
+XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
+  python3 tools/linux-adapt/<script>.py
 ```
+
+依赖不新增：`numpy` / `pillow` 来自 `images` 组，`maa` 来自 `pipeline` 组的 PyPI 包 `maafw`。

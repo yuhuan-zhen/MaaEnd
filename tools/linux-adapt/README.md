@@ -41,13 +41,22 @@
 
 ## 运行
 
+依赖全部来自既有依赖组，无需新增：`numpy` / `pillow` 在 `images` 组，`maa` 来自 `pipeline` 组的 PyPI 包 `maafw`（import 名与包名不同）。默认组 `scripts` 已 include 这两组，所以仓库口径直接 `uv run`：
+
 ```bash
 # 直连 github 不通，需走本机代理
 git -c http.proxy=http://127.0.0.1:7890 fetch origin v2
 
 # L1 验收（只读截图，不注入输入）
-cd tools/linux-adapt
-XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 python3 l1_screencap.py --n 20
+XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
+  uv run python tools/linux-adapt/l1_screencap.py --n 20
+```
+
+本机 WSL 未安装 uv（`requires-python >= 3.14`，`.python-version` 固定 3.14），L1 证据是用 WSL 系统 Python 3.12 + 已装好的 `maafw 5.14.3 / numpy 2.5.4 / pillow 13.0.0` 跑出的，依赖版本与锁文件一致：
+
+```bash
+XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
+  python3 tools/linux-adapt/l1_screencap.py --n 20
 ```
 
 产物在 `evidence-l1/`（已 gitignore）：`l1.json`、`frame-bgr2rgb.png`、`ref-grim.png`。
