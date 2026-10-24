@@ -110,7 +110,7 @@ C++ 主线的三条硬要求（与工具的分界线就在这里）：
 | 卡点 | ① `MaaUtils` 是空子模块（`Logger.h`/`NoWarningCV.hpp` 在里面）② `.so` 名字不确定 ③ 运行期找不到库（rpath） |
 | 验收 | 打印出版本号；`MaaControllerPostConnection` 返回成功 |
 
-### L1 截图（~70 行）
+### L1 截图（342 行，已完成 2026-10-25）
 
 | 项 | 内容 |
 | --- | --- |
@@ -118,7 +118,8 @@ C++ 主线的三条硬要求（与工具的分界线就在这里）：
 | 参考 | `[FW-2.4]`（Linux Screencap）`[HDR]`（`MaaImageBufferGetRawData/Type`）`[FW-2.2]`（`post_screencap`）；Python 前置探测见本仓库 [`archive/l1_screencap.py`](archive/l1_screencap.py)（已冻结，8/8 PASS，只作对照，**不是本层交付**） |
 | 语言 | **C++**（本层起不再用 Python 做实现；Python 版仅作为已验证事实的参照） |
 | 卡点 | **`to_mat` 是视图**：`ScopedImageBuffer` 析构后再用 `cv::Mat` 就是悬空指针，务必 `imwrite` 在作用域内完成 |
-| 验收 | PNG 能打开、1280×720、通道数 3；耗时与 `docs/05` 的 16.2 ms 同量级 |
+| 验收 | ✅ PNG 能打开、1280×720、3 通道、`type=16`；median **16.13 ms**（docs/05 参考 16.2）；通道序经背景色实测为 BGR |
+| 产物 | [`mini-cpp/l1_screencap.cpp`](mini-cpp/l1_screencap.cpp) + 注释版 + [`study/L1-详读.md`](study/L1-详读.md) + [`study/L1-肉眼验收.md`](study/L1-肉眼验收.md) + [`verify-l1.sh`](verify-l1.sh) |
 
 ### L2 Tasker + Resource（~110 行）
 

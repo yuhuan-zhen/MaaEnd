@@ -116,3 +116,23 @@ XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
 | 实际编译（g++ 13.3.0 + CMake 3.28.3 + Ninja 1.11.1） | **通过**，`[2/2] Linking CXX executable l0_env` |
 | 实际运行（嵌套 sway，socket `wayland-1`） | **通过**：`version v5.14.3` → `controller created` → `connected = true` → 退出码 0 |
 | ControlUnit 运行期依赖 | `libpipewire-0.3.so.0`、`libei.so.1`、`libwayland-client.so.0`、`libxkbcommon.so.0` 本机齐全 |
+
+## L1 截图（`l1_screencap`）
+
+```bash
+./build/l1_screencap --out frame.png --frames 20
+./build/l1_screencap /run/user/0/wayland-1 --out frame.png   # 指定 socket
+```
+
+做四件事：抓一帧 → 打印形状/通道均值 → 存 PNG → 抓 N 帧统计耗时。
+
+| 输出 | 含义 |
+| --- | --- |
+| `frame = 1280x720, channels = 3, type = 16` | `type 16` = CV_8UC3（8 位 × 3 通道） |
+| `channel mean BGR = [...]` | 背景 `#1b2b34` 时应为 `[52, 43, 27]` → 证明是 BGR |
+| `resolution = 1280x720` | 截图之后 `GetResolution` 才有值 |
+| `screencap x20 ms: ... median = 16.x` | Wlr 链路参考值 |
+
+**不依赖 OpenCV**：PNG 由框架的 `MaaImageBufferGetEncoded` 提供编码，我们只写文件。
+
+一键验收：`bash ../verify-l1.sh`（详见 [`../study/L1-肉眼验收.md`](../study/L1-肉眼验收.md)）。
