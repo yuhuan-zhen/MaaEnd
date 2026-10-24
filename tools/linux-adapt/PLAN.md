@@ -80,10 +80,24 @@
 
 ## 环境备忘
 
-```bash
-# 直连 github 不通，需走本机代理
-git -c http.proxy=http://127.0.0.1:7890 fetch origin v2
+### 仓库与推送（个人记录用）
 
+- 工作台：`yuhuan-zhen/MaaEnd`（fork），分支 `feat/linux-adapt`
+- 远端分工：`fork` 指向自己的 fork（唯一可推）；`origin` / `upstream` 都指向 `MaaEnd/MaaEnd`，只读
+- **不向上游 `MaaEnd/MaaEnd` 开 PR**：这条线只作个人记录与本地实践
+- 不扩展 CI：不挂 self-hosted runner；L1/L2/L5 在本机手动跑，判定靠脚本退出码
+
+```bash
+# 推自己的 fork（需代理）
+git -c http.proxy=http://127.0.0.1:7890 push fork feat/linux-adapt
+
+# 拉上游最新
+git -c http.proxy=http://127.0.0.1:7890 fetch origin v2
+```
+
+### 运行验收脚本
+
+```bash
 # 仓库口径（默认组 scripts + dev 已含 numpy / pillow / maafw）
 XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
   uv run python tools/linux-adapt/<script>.py
