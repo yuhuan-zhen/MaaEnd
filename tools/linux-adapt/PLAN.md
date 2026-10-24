@@ -4,9 +4,41 @@
 
 - 基线：`origin/v2` = `a9393386`（2026-10-24）
 - 分支：`feat/linux-adapt`
-- 本仓库参考书：[`docs/`](docs/)（01–05 五篇）
-- 产物目录：`tools/linux-adapt/mini-cpp/`
+- 本仓库参考书：[`docs/`](docs/)（01–06 六篇）
+- 产物目录：`tools/linux-adapt/mini-cpp/`（C++ 主线）
 - 仓库约定：推 `yuhuan-zhen/MaaEnd`（fork，SSH 部署密钥）；**不向上游开 PR**
+
+## 语言规范（硬约束，2026-10-25 定）
+
+| 类别 | 语言 | 范围 | 依据 |
+| --- | --- | --- | --- |
+| **主线实现** | **只用 C++20** | 控制器实现、适配层、一切要与 MaaEnd 架构对齐的代码 | MaaEnd 发行包只带 C++ / Go / Rust 二进制（`install/` 下 `cpp-algo.exe`、`go-service.exe`、`MaaPiCli.exe`、`mxu.exe`），**没有任何 Python 运行时**；维护者口径是「不增加应用语言运行时」（PR #6800） |
+| **辅助工具** | 允许其他语言（当前 Python） | 仅限 `tools/` 下的探测、统计、一次性验证脚本 | 不进实现路径、不进发行包、不得成为产品依赖 |
+
+**判定一个文件属于哪一类：看它在不在实现路径上。**
+
+- 会被用户/客户端启动、要给别的机器用、要进发行包 → **主线 → C++**
+- 只在本机跑一次、产出数据或结论 → **工具 → 允许 Python**
+
+现状标注：
+
+| 文件 | 归类 | 说明 |
+| --- | --- | --- |
+| `mini-cpp/*.cpp`、`CMakeLists.txt` | 主线 | L0 已编译运行通过 |
+| `MaaEnd-src/tools/cloud-web-linux/cdp_controller.py`（1189 行 Python） | **工具 / 实验台** | 事实基线来源（DPI 26 项自检、键码映射、`get_custom_info`），**不作为主线实现**；主线由 L3 起的 C++ 版复刻其已验证的事实 |
+| `keycensus.py`、`fixtures/gen_expected_keys.py` | 工具 | 键码统计与期望表生成 |
+| `archive/l1_screencap.py` | 工具（已冻结） | L1 的 Python 前置探测，只作对照 |
+
+**禁止**：
+
+- 主线引入 Go / Rust / Node / Python（不新增语言运行时）
+- 工具代码反向成为实现的依赖 —— 工具可以删掉，实现不能依赖它
+
+C++ 主线的三条硬要求（与工具的分界线就在这里）：
+
+1. `-Wall -Wextra -Wpedantic` 零警告
+2. `clang-format-17` + `agent/cpp-algo/.clang-format` 零改动（已实测：L0 两个文件均为 0 行）
+3. 资源一律 RAII（`ScopedController` 这类）、C API 返回值全部检查
 
 ## 这一轮重审改了什么
 
@@ -18,6 +50,8 @@
 | 4 | 只写了「能跑」，没写每层最常见卡点 | 每层补「卡点」与「验收判据」 |
 
 ## 合规结论：C++ 是对的语言
+
+> 本节是**论证**，结论已上升为上面的「语言规范（硬约束）」：主线只用 C++20，工具才允许其他语言。
 
 | | C++（cpp-algo） | Go（go-service） | C |
 | --- | --- | --- | --- |
@@ -81,7 +115,8 @@
 | 项 | 内容 |
 | --- | --- |
 | 做什么 | 抓一帧 → `to_mat` → `cv::imwrite` 存 PNG → 打印尺寸/通道/耗时 |
-| 参考 | `[FW-2.4]`（Linux Screencap）`[HDR]`（`MaaImageBufferGetRawData/Type`）`[FW-2.2]`（`post_screencap`）；参照实现见本仓库 [`archive/l1_screencap.py`](archive/l1_screencap.py)（Python，已冻结） |
+| 参考 | `[FW-2.4]`（Linux Screencap）`[HDR]`（`MaaImageBufferGetRawData/Type`）`[FW-2.2]`（`post_screencap`）；Python 前置探测见本仓库 [`archive/l1_screencap.py`](archive/l1_screencap.py)（已冻结，8/8 PASS，只作对照，**不是本层交付**） |
+| 语言 | **C++**（本层起不再用 Python 做实现；Python 版仅作为已验证事实的参照） |
 | 卡点 | **`to_mat` 是视图**：`ScopedImageBuffer` 析构后再用 `cv::Mat` 就是悬空指针，务必 `imwrite` 在作用域内完成 |
 | 验收 | PNG 能打开、1280×720、通道数 3；耗时与 `docs/05` 的 16.2 ms 同量级 |
 
