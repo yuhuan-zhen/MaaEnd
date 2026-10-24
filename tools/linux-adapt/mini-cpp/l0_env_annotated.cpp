@@ -52,12 +52,10 @@
 namespace mini
 {
 
-// 截图方式的枚举值：1 = Wlr（走 zwlr-screencopy 协议）。
-// 数字出处 [FW-2.4] 的 Linux Screencap 表；写错不会报错，只会静默换成别的方式。
-constexpr int kScreencapMethodWlr = 1;
-
-// 输入方式的枚举值：1 = Wlr（走 wlr virtual pointer 协议）。出处同上。
-constexpr int kInputMethodWlr = 1;
+// 截图方式直接用 SDK 的枚举宏：MaaDef.h:491 `#define MaaLinuxScreencapMethod_Wlr 1ULL`。
+// 为什么不自己写 constexpr int = 1：这套枚举是位掩码（ExtImage=1<<1、PipeWire=1<<2），
+// 上游调整位序时，抄来的字面量不会报错，只会静默连成另一种方式。
+// 输入方式同理，见 MaaDef.h:509 `MaaLinuxInputMethod_Wlr`。
 
 // 嵌套 sway 的 socket 路径。
 // 为什么是 wayland-1 而不是 wayland-0：wayland-0 被 WSLg 自己占用了。

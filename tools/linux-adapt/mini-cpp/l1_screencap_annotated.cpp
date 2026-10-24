@@ -56,7 +56,6 @@ void log_error(const std::string& message)
 }
 
 // 控制器句柄的 RAII 包装：离开作用域自动 MaaControllerDestroy。
-// 控制器句柄的 RAII 包装。
 // 为什么必须包：C API 的句柄是不透明指针，忘掉 Destroy 就是泄漏；
 // 上游自己在 ControlUnit.cpp:365 用 shared_ptr(handle, destroy_func) 做同一件事。
 class ScopedController

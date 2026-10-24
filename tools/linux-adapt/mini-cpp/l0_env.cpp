@@ -16,9 +16,9 @@
 namespace mini
 {
 
-// 截图与输入方式的枚举值，见 MaaDef.h 的 MaaLinuxScreencapMethod / MaaLinuxInputMethod
-constexpr int kScreencapMethodWlr = 1;
-constexpr int kInputMethodWlr = 1;
+// 截图与输入方式直接用 SDK 的枚举宏（MaaDef.h:491 `MaaLinuxScreencapMethod_Wlr` = 1ULL）。
+// 不要自己抄那个 1：这套枚举是位掩码（ExtImage=1<<1、PipeWire=1<<2），
+// 上游调整位序时抄来的字面量不会报错，只会静默连成另一种方式。
 
 // 嵌套 sway 的 socket。wayland-0 被 WSLg 占用，所以是 wayland-1。
 constexpr const char* kDefaultSocketPath = "/run/user/0/wayland-1";
@@ -66,8 +66,8 @@ std::string build_config_json(const std::string& socket_path)
 {
     std::string json;
     json += "{";
-    json += "\"screencap_method\": " + std::to_string(kScreencapMethodWlr) + ",";
-    json += "\"input_method\": " + std::to_string(kInputMethodWlr) + ",";
+    json += "\"screencap_method\": " + std::to_string(MaaLinuxScreencapMethod_Wlr) + ",";
+    json += "\"input_method\": " + std::to_string(MaaLinuxInputMethod_Wlr) + ",";
     json += "\"wlr_socket_path\": \"" + socket_path + "\",";
     json += "\"use_win32_vk_code\": true";
     json += "}";

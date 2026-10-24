@@ -14,7 +14,6 @@
 namespace
 {
 
-constexpr int kWlrMethod = 1;
 constexpr const char* kDefaultSocketPath = "/run/user/0/wayland-1";
 constexpr const char* kEntry = "L2Click";
 constexpr const char* kNodeClick = "L2Click";
@@ -96,7 +95,7 @@ using ScopedStringList = ScopedHandle<MaaStringListBuffer, MaaStringListBufferDe
 
 std::string build_config_json(const std::string& socket_path)
 {
-    return std::string("{\"screencap_method\":") + std::to_string(kWlrMethod) + ",\"input_method\":" + std::to_string(kWlrMethod)
+    return std::string("{\"screencap_method\":") + std::to_string(MaaLinuxScreencapMethod_Wlr) + ",\"input_method\":" + std::to_string(MaaLinuxInputMethod_Wlr)
            + ",\"wlr_socket_path\":\"" + socket_path + "\"" + ",\"use_win32_vk_code\":true}";
 }
 
