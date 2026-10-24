@@ -84,8 +84,9 @@ XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
 [INFO] resolution unavailable
 ```
 
-`resolution unavailable` **是正常的**：Linux 控制器的 `MaaControllerGetResolution` 返回 `MaaBool` false（API 未实现）。
-Python binding 的 `controller.resolution` 属性忽略这个 false，所以那边看到的是 `(0, 0)` —— 两者说的是同一件事。
+`resolution unavailable` **是正常的**，但原因不是「没实现」：`MaaControllerGetResolution` 返回的是
+**最近一次成功截图的原始尺寸**（`ControllerAgent.cpp:232`），本程序没截图，缓存为 0 所以返回 false。
+实测：截一帧后同一调用返回 `1280x720`。见 `study/L0-源码对照.md` 第 4 节。
 
 ## 判据
 

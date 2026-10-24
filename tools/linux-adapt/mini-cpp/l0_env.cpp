@@ -118,7 +118,8 @@ int main(int argc, char** argv)
     const bool connected = MaaControllerConnected(controller.get()) != 0;
     mini::log_info(std::string("connected = ") + (connected ? "true" : "false"));
 
-    // Linux 控制器的 GetResolution 尚未实现，预期返回 0x0；这里只记录，不作为失败条件。
+    // GetResolution 返回的是「最近一次成功截图的尺寸」；本程序没截图，缓存为 0，故预期 false。
+    // 这里只记录，不作为失败条件——把它当失败会让你误判环境。
     int32_t width = 0;
     int32_t height = 0;
     if (MaaControllerGetResolution(controller.get(), &width, &height)) {
