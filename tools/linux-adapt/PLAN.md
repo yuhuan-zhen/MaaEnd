@@ -81,7 +81,7 @@
 | 项 | 内容 |
 | --- | --- |
 | 做什么 | 抓一帧 → `to_mat` → `cv::imwrite` 存 PNG → 打印尺寸/通道/耗时 |
-| 参考 | `[FW-2.4]`（Linux Screencap）`[HDR]`（`MaaImageBufferGetRawData/Type`）`[FW-2.2]`（`post_screencap`） |
+| 参考 | `[FW-2.4]`（Linux Screencap）`[HDR]`（`MaaImageBufferGetRawData/Type`）`[FW-2.2]`（`post_screencap`）；参照实现见本仓库 [`archive/l1_screencap.py`](archive/l1_screencap.py)（Python，已冻结） |
 | 卡点 | **`to_mat` 是视图**：`ScopedImageBuffer` 析构后再用 `cv::Mat` 就是悬空指针，务必 `imwrite` 在作用域内完成 |
 | 验收 | PNG 能打开、1280×720、通道数 3；耗时与 `docs/05` 的 16.2 ms 同量级 |
 
