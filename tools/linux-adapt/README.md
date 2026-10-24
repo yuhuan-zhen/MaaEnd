@@ -10,12 +10,14 @@
 
 | 层 | 内容 | 状态 |
 | --- | --- | --- |
-| L1 帧源 | `WlrScreencap` 帧正确性 / 通道序 / 耗时 | ✅ 已验收（8/8） |
-| L2 输入原语 | 点击、拖动、键盘、滚轮、相对移动的页面级可见性 | 待开始 |
+| L1 帧源 | `WlrScreencap` 帧正确性 / 通道序 / 耗时 | ✅ 已验收（8 项判定全过；另有 2 项记录项） |
+| L2 输入原语 | 策略注入（复用 #6746 `kInputPolicy`）+ 点击/悬停/拖动/键盘/滚轮/相对移动的页面级可见性 | 待开始 |
 | L3 节点契约 | `resource_linux` 四个私有节点的实现形式 | 待开始 |
-| L4 Go 动作 | `rotateView` / `RelativeMoveAction` 是否需平台分支 | 待开始 |
+| L4 Go 动作 | 默认**不加平台分支**（与 #6746 一致，靠资源层选实现） | 待开始 |
 | L5 任务 | 滑索、环境监测端到端 | 待开始 |
-| L6 客户端 | MXU 可视化与暂停、自带入口 | 待开始 |
+| L6 客户端 | MXU 可视化与暂停（`Linux-Wlroots` 在 PI 闭集内，无需自带入口） | 待开始 |
+
+上游参照：MaaEnd [#6746](https://github.com/MaaEnd/MaaEnd/pull/6746)（Windows 网页版宿主，closed）+ MXU [#395](https://github.com/MaaXYZ/MXU/pull/395)。哪些资产复用、哪些不复用，见 [`PLAN.md`](PLAN.md) 的「复用矩阵」。
 
 ## L1 结果（2026-10-24）
 
@@ -31,6 +33,19 @@
 | 与 grim 一致性 | NCC **1.0**（同 zwlr-screencopy 协议，逐像素一致） | ✅ |
 
 对比上一代 CDP 控制器（`Page.captureScreenshot`）：**103–154 ms/帧 → 16 ms/帧**，约 6–9 倍。
+
+### 结构重构（2026-10-24）：抽公共库 + 拆记录项
+
+改的是结构，**没有重跑验收**，上表数字仍是重构前那次实测：
+
+| 改动 | 原因 |
+| --- | --- |
+| `ncc` / `channel_means` / `save_png` / `grim_capture` / `default_wlr_socket` 抽到 `harness/common.py` | L2 的输入探针也要比图、落盘，各写一份早晚分叉 |
+| `--socket` 默认值由 `$XDG_RUNTIME_DIR` + `$WAYLAND_DISPLAY` 推导 | 写死 `/run/user/0/wayland-1` 换用户/换显示实例就错 |
+| `resolution` 从判定项改为**记录项**（`resolution_api`），尺寸判定只用帧 shape | 原写法用 `or` 兜底让它恒真，把「上游 API 未补全」这个事实藏住了 |
+| 新增记录项 `start_app`（`probed: false`） | 上游仍是 `TODO`，本层不调用，只留事实给 L5 |
+
+判定项仍是 8 项，通过率口径不变；注释版同步重建（`study/l1_screencap_annotated.py` 290 行、`study/harness_common_annotated.py` 110 行，两份 AST 均与源文件一致）。
 
 ### 发现：`MaaControllerGetResolution` 在 Linux 控制器上返回 `(0, 0)`
 
