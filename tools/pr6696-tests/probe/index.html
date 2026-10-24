@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>pr6696 probe</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #000; }
+  canvas { display: block; }
+  video { position: absolute; left: 0; top: 0; opacity: 0.01; width: 2px; height: 2px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<video id="v" playsinline muted></video>
+<script>
+(() => {
+  const W = 1280, H = 720;
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const video = document.getElementById('v');
+
+  window.__ready = false;
+  window.__synthetic = false;
+  window.__log = [];
+  window.__clicks = 0;
+  window.__maaRelative = null;
+
+  function startStream() {
+    try {
+      const stream = canvas.captureStream(30);
+      video.srcObject = stream;
+      video.play().catch(() => {});
+    } catch (e) {
+      window.__streamError = String(e);
+    }
+    window.__ready = true;
+  }
+
+  // 用真实素材当一帧画面。纯色会让 PNG 压缩率虚高，测出来的延迟没有参考价值。
+  const img = new Image();
+  img.onload = () => { ctx.drawImage(img, 0, 0, W, H); startStream(); };
+  img.onerror = () => {
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    for (let i = 0; i <= 20; i++) grad.addColorStop(i / 20, `hsl(${i * 18}, 70%, 45%)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    const data = ctx.getImageData(0, 0, W, H);
+    for (let i = 0; i < data.data.length; i += 4) {
+      data.data[i] = (i * 37) & 255;
+      data.data[i + 1] = (i * 11) & 255;
+      data.data[i + 2] = (i * 7) & 255;
+    }
+    ctx.putImageData(data, 0, 0);
+    window.__synthetic = true;
+    startStream();
+  };
+  img.src = 'frame.png';
+
+  const record = (phase, type) => (e) => {
+    window.__log.push({
+      phase, type, t: performance.now(),
+      x: e.clientX, y: e.clientY,
+      mx: e.movementX | 0, my: e.movementY | 0,
+      buttons: e.buttons | 0,
+    });
+    // 只数 pointerdown：同一次点击会同时产生 pointerdown 与 mousedown，
+    // 两个都数会把「一次点击」算成两次。
+    if (type === 'pointerdown') window.__clicks++;
+  };
+  // 捕获阶段：先于页内钩子，记录浏览器原始值
+  for (const t of ['pointermove', 'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'wheel']) {
+    window.addEventListener(t, record('capture', t), { capture: true, passive: true });
+  }
+  // 冒泡阶段：晚于捕获阶段的钩子，读到的是被覆盖后的 movementX/Y —— 等于下发给 SDK 的值
+  window.addEventListener('mousemove', record('bubble', 'mousemove'), { capture: false, passive: true });
+
+  // 与 cdp_controller.py 的 INPUT_POLICY_JS 同构：在捕获阶段覆盖 movementX/Y，
+  // 用于 T5 --mode hook，验证「页内注入的位移值是否精确等于请求值」。
+  window.__installHook = (ax, ay) => {
+    window.addEventListener('mousemove', (e) => {
+      if (!window.__maaRelative || !e.isTrusted) return;
+      if (e.clientX !== ax || e.clientY !== ay) return;
+      const r = window.__maaRelative;
+      window.__maaRelative = null;
+      Object.defineProperties(e, {
+        movementX: { get: () => r.dx },
+        movementY: { get: () => r.dy },
+      });
+    }, true);
+    return true;
+  };
+
+  window.__resetLog = () => { window.__log = []; window.__clicks = 0; };
+  window.__state = () => ({
+    ready: window.__ready,
+    synthetic: window.__synthetic,
+    videoW: video.videoWidth | 0,
+    videoH: video.videoHeight | 0,
+    dpr: window.devicePixelRatio,
+    innerW: window.innerWidth,
+    innerH: window.innerHeight,
+    outerW: window.outerWidth,
+    outerH: window.outerHeight,
+    screenW: screen.width,
+    screenH: screen.height,
+    visibility: document.visibilityState,
+  });
+
+  // rAF 采样，用于 T6 的节流检查
+  // 页面被切到后台时 rAF 会被挂起，若只靠 rAF 收尾，Promise 永不 resolve。
+  // 用 setTimeout 兜底：超时按「已采样帧数 / 实际时长」算，0 帧就是 0 fps。
+  window.__rafFps = (ms) => new Promise((resolve) => {
+    const stamps = [];
+    const t0 = performance.now();
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      const elapsed = Math.max(performance.now() - t0, 1) / 1000;
+      resolve(stamps.length / elapsed);
+    };
+    const tick = (t) => {
+      stamps.push(t);
+      if (t - t0 < ms) requestAnimationFrame(tick);
+      else finish();
+    };
+    requestAnimationFrame(tick);
+    setTimeout(finish, ms + 250);
+  });
+})();
+</script>
+</body>
+</html>
