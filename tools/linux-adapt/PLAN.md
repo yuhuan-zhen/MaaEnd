@@ -40,6 +40,61 @@ C++ 主线的三条硬要求（与工具的分界线就在这里）：
 2. `clang-format-17` + `agent/cpp-algo/.clang-format` 零改动（已实测：L0 两个文件均为 0 行）
 3. 资源一律 RAII（`ScopedController` 这类）、C API 返回值全部检查
 
+## 价值定位（2026-10-25 修订）
+
+这条线交付三样东西，不是"一个控制器"：
+
+| 交付物 | 现状 | 若 #6807 落地 |
+| --- | --- | --- |
+| **Linux 侧规格文档**（能力与限制 / 输入链路 / 排障 / 节点契约 / 键码空间） | `docs/` 六篇，带源码行号与实测 | **仍需项目侧完成**（浏览器启动、`resource_cloud_web` 覆盖、Linux 特有的坑） |
+| **实测数据**（帧延迟、通道序、127 分批、VK 空间、`GetResolution` 语义） | 分散在 `docs/05`、`docs/06`、`study/L1-详读` | 变成框架实现的**验收基线** |
+| **分层代码与讲义**（L0–L6，每层注释版 + 详读） | L0、L1 完成并实测 | 学习价值不变；L3/L4 改为"对齐 `web` 字段"的练习 |
+
+**明确不再投的**：自己写一个"最终版 Linux 控制器"。若 #6807 落地，框架内置的 `MaaWebControlUnit` 会取代它——重复投入没有意义。
+
+## 上游动向：#6807「内置 Web 控制器」
+
+时间：2026-10-25 提出；状态：open，待讨论（Edge vs WebView2 未定）。
+性质：**替代方案**，否掉 #6800（伪造 Win32 窗口 + `StretchDIBits` 画帧 + 反解 `WM_*`）与 #6696（headless sway + Wlr 控制器，不经 MXU）。
+
+要点：
+
+- MaaFramework 新增 `MaaWebControlUnit` + `MaaWebControllerCreate(config_json)`，PI 新增 `controller.type: "Web"`
+- **只连接已运行的浏览器，不负责启动**；启动、登录、排队交给项目侧（MaaEnd 的 `--pretask LaunchCloudWeb` 与常驻 `--cloud-host`）
+- 复用表里点了 #6696 的四项：Chrome 启动参数与坑、`cdp_controller.py` 的取帧与坐标逻辑、`WebStartGame` 与 `resource_web` 节点、退出游戏 / 隐藏浮球 / 关闭对话框
+
+**我们在其中的角色：Linux 侧的规格提供者与验证器，不是实现者。**
+
+### `web` 配置 ↔ 我们已验证的实现
+
+| #6807 字段 | 我们的实现 | 状态 |
+| --- | --- | --- |
+| `viewport` 1280×720 / DSF 1 | `Emulation.setDeviceMetricsOverride(width,height,deviceScaleFactor,screenWidth,screenHeight,viewport.scale)` | ✅ 已验证（四种窗口下点击均命中） |
+| `relative_move.anchor [640,360]` | 锚点取视频中心 `_to_page(640,360)` | ✅ |
+| `relative_move.max_step 127` | `_MAX_RELATIVE_STEP = 127` + 分片 | ✅ 解码已验证；**真页面 >127 行为未验证** |
+| `relative_move.prepare` | `__maaCloudRelativeMove` + 捕获阶段 `defineProperties(movementX)` | ✅ 假页面实测 `movementX` 合计 == 请求值 |
+| `frame.source = video` | `drawImage(video)` → canvas → `toDataURL` | ✅ 已实测耗时 |
+| `use_win32_vk_code` | `_vk_to_dom_code()` 硬映射，未覆盖键显式失败 | ✅ 比上游更严 |
+| `hooks.stop_app` | `inactive()` / 关浏览器 | △ 部分 |
+| 拒绝 pointer lock / focus 置空 / 浮球 inert | `INPUT_POLICY_JS` | ✅ |
+
+### 需要提供给上游的三条数据
+
+1. **帧延迟对比**：Wlr screencopy 1280×720 **16.13 ms**（p95 16.28）/ CDP canvas→`toDataURL` PNG **103–154 ms**（四次独立批次）
+2. **相对移动的处理**：必须拆到单次 ≤127 px（依据 #6746 `CloudBridge.cpp:368-372` 注释；**我们在真页面未独立验证 >127 的截断行为**，如实标注）
+3. **双客户端并发**：`--remote-debugging-pipe`（输入）+ `127.0.0.1:9334`（只读探测）同时访问同一页面，未冲突
+
+可直接粘贴的评论草稿见 [`docs/07-issue6807-评论草稿.md`](docs/07-issue6807-评论草稿.md)。
+
+### 何时更新本节
+
+| 触发 | 动作 |
+| --- | --- |
+| 他们定了 `frame.source` 的语义（`video` / `page`） | 更新 L1、L3 的取帧对照 |
+| 增加 JPEG / 质量参数 | 补"有损编码对模板匹配命中率"的实验计划 |
+| `MaaWebControllerCreate` 进入 binding 或 CI | 更新 L3 验收方式 |
+| 方案被否决或改向 | 本节整节重写，不保留过期判断 |
+
 ## 这一轮重审改了什么
 
 | # | 问题 | 修正 |
@@ -134,7 +189,7 @@ C++ 主线的三条硬要求（与工具的分界线就在这里）：
 
 | 项 | 内容 |
 | --- | --- |
-| 做什么 | 实现 21 个回调里的最小集，让框架用**你写的**控制器跑通 L2 那个节点 |
+| 做什么 | 实现 21 个回调里的最小集，让框架用**你写的**控制器跑通 L2 那个节点。**对齐目标取 #6807 的 `web` 配置**：`endpoint_file` → 连接、`viewport` → 锁视口、`frame` → 取帧、`hooks` → 输入前后钩子、`relative_move` → 锚点 + 单步上限。这样写出来的控制器与框架将来内置的 `MaaWebControlUnit` 同构，不是另一个方言 |
 | 参考 | `[HDR]`（`MaaCustomControllerCallbacks` 全字段）`[FW-1.3]`（同进程 vs 跨进程）`[FW-4.2]`（为什么是 handle + 回调表）`[SRC-LOOP]` |
 | 卡点 | ① 回调表是**裸函数指针**，其生命周期必须长于 controller ② `get_features()` 声明了 `UseMouseDownAndUpInsteadOfClick` 却没实现 `touch_down/up`，点击全废 ③ `void* trans_arg` 要能转回自己的对象 |
 | 验收 | 同一个 pipeline 节点，用你自己的控制器也 `succeeded`；L1/L2 的控制器代码在此被替换（**刻意设计**：先证明环境通，再替换实现） |
@@ -144,7 +199,7 @@ C++ 主线的三条硬要求（与工具的分界线就在这里）：
 | 项 | 内容 |
 | --- | --- |
 | 做什么 | 补 `swipe` / `click_key` / `scroll` / `relative_move` |
-| 参考 | `[FW-2.4]`（Wlr/UInput/Libei 的输入方式差异）`[ME-3]`（转视角节点语义）本仓库 [`docs/02`](docs/02-Wlroots输入链路解剖.md) |
+| 参考 | `[FW-2.4]`（Wlr/UInput/Libei 的输入方式差异）`[ME-3]`（转视角节点语义）本仓库 [`docs/02`](docs/02-Wlroots输入链路解剖.md)；**语义基线取 #6807 的 `web` 段**：`click/swipe/touch_*` → `Input.dispatchMouseEvent`、`key_*` → `Input.dispatchKeyEvent`（VK→key/code 映射）、`scroll` → `mouseWheel`、`relative_move` → 锚点 + 单步上限分片 |
 | 卡点 | ① `contact` 在鼠标型输入下是左/右/中键，不是手指号 ② 相对移动在 Wlroots 链路上无效且**不报错**——自己的实现要显式打日志 ③ 键码空间（VK vs evdev）——见 [`PLAN-键码验证.md`](PLAN-键码验证.md) 与 [`docs/06`](docs/06-键码空间与VK转换.md)，**入口验收**是 24 键正负两组全过 |
 | 验收 | 探针页收到四种事件；`relative_move` 若无效果，日志必须能说清"发了但无效" |
 
