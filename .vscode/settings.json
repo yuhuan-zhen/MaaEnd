@@ -85,8 +85,5 @@
             "source.organizeImports": "explicit"
         }
     },
-    "python.analysis.extraPaths": [
-        "./tools/linux-adapt"
-    ],
     "cmake.ignoreCMakeListsMissing": true
 }
