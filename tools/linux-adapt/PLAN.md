@@ -1,110 +1,115 @@
-# Linux 侧：从零搭建与理解计划（C 语言版）
+# Linux 侧：从零搭建与理解计划（C++ 版）
 
-面向「用 C 调 MaaFramework 原生接口、把 Linux 侧彻底搞懂」的路线。练习册，不是交付清单。
+面向「用 C++ 调 MaaFramework 原生接口、把 Linux 侧彻底搞懂」的路线。练习册，不是交付清单。
 
 - 基线：`origin/v2` = `a9393386`（2026-10-24）
 - 分支：`feat/linux-adapt`
 - 参考书：[`docs/`](docs/)（01–05 五篇）
-- 产物目录：`tools/linux-adapt/mini-c/`
+- 产物目录：`tools/linux-adapt/mini-cpp/`
 - 仓库约定：推 `yuhuan-zhen/MaaEnd`（fork，SSH 部署密钥）；**不向上游开 PR**
 
-## 先定语言与合规（重要）
+## 合规结论：C++ 是对的语言
 
-| | C 语言 | C++（cpp-algo） | Go（go-service） |
+| | C++（cpp-algo） | Go（go-service） | C |
 | --- | --- | --- | --- |
-| 上游 MaaFramework | **原生接口**，官方支持 | 官方 sample 语言 | 无 |
-| MaaEnd agent | **没有 C 构建目标** | ✔ 主力 | ✔ |
-| 定位 | 合规的「**集成方式**」 | 合规的「**可合并代码**」 | 同左 |
+| MaaEnd agent | ✔ 主力 | ✔ | ✘ 无构建目标 |
+| 上游 sample | ✔ | — | 原生接口，能用但无示例 |
+| 可被合并 | ✔ | ✔ | ✘ |
 
-三句话说清：
+所以本计划全程 C++，**规范直接适用**，不需要"语言的妥协"：
 
-1. **C 是 MaaFramework 的一等公民**。`2.1-集成文档` 里 C++ 那一行写着「原生接口 ✔ / 标准化接口 ❌」——纯 C 就是「原生接口」这一档，`MaaAPI.h` 提供全部能力。
-2. **MaaEnd 没有 C 代码**。agent 只有 `cpp-algo`（C++）与 `go-service`（Go），构建系统里没有 C 目标，C 代码进不去。
-3. 所以 C 的正确落位是**独立宿主/工具程序**（`tools/linux-adapt/mini-c/`），能跑、能演示、能讲清；但不要指望它被 MaaEnd 合并。
+- `agent/go-service` 管业务流程，`agent/cpp-algo` 管「单点难算法 + 平台适配」
+- `cpp-algo-style` 的命名/头文件/错误处理/CMake 规范全部照做
+- 日志用 `<MaaUtils/Logger.h>` 的 `LogInfo << VAR(x)`
+- JSON 用 `meojson`
+- 图像用 `<MaaUtils/NoWarningCV.hpp>` 引入的 OpenCV
 
-若目标改成「能被合并」，就得写 C++ 并对齐 `cpp-algo-style`。那条路与本计划的差别只在语法，架构与六层完全一致。
+**落位**：学习期放 `tools/linux-adapt/mini-cpp/`（独立 target，不污染 agent 构建）；若将来要合并，搬进 `agent/cpp-algo/source/cloud-webview-linux/`，与 #6800 的 `cloud-webview/` 并列。
 
-## 规范映射：C 代码怎么长得像这个项目
+## 现成的轮子（不要重写）
 
-仓库的 `cpp-algo-style` / `maa-logging` 是 C++ 规范，可搬到 C 的部分：
+`agent/cpp-algo/source/utils.h` 已经提供了本节课要用的全部 RAII 封装：
 
-| 规范条目（C++） | C 里怎么写 |
+| 工具 | 用途 |
 | --- | --- |
-| 结构体 / 枚举 PascalCase | `struct MiniController`, `enum Phase` |
-| 自由函数对外 PascalCase、内部工具 snake_case | `MiniControllerCreate()`, `write_png()` |
-| 变量 snake_case、成员尾下划线 | `int frame_count_;` |
-| 常量 `k` 前缀 + PascalCase | `kMaxFrames` |
-| 宏 ALL_CAPS | `LOG_ERROR(...)` |
-| include 顺序 | 对应头 → 标准库 → 第三方 → `<MaaFramework/...>` → 本项目 `""` |
-| 不吞错，失败必打日志 | 每个回调 `return MAA_FALSE` 前必须有一条 `LOG_ERROR` |
-| 缓冲区 create/destroy 配对 | 用 `goto cleanup` 保证释放（对应 C++ 的 `ScopedImageBuffer`） |
+| `ScopedImageBuffer` | `MaaImageBuffer` 的 RAII 包装，禁拷贝 |
+| `ScopedStringBuffer` / `ScopedStringListBuffer` | 同上，字符串缓冲 |
+| `to_mat(const MaaImageBuffer*)` | 直接转 `cv::Mat`（零拷贝视图） |
+| `get_exe_dir()` / `get_install_dir()` / `setup_dll_directory()` | 路径与 DLL 目录 |
 
-**唯一无法对齐处**：`<MaaUtils/Logger.h>` 的 `LogInfo << VAR(x)` 是 C++ 流式宏，C 用不了。替代为 printf 风格宏：
+**L1 就用 `to_mat`**，不要自己从 `GetRawData` 拼 CV_8UC3。
 
-```c
-#define LOG_INFO(...)  log_write("INFO", __VA_ARGS__)
-#define LOG_ERROR(...) log_write("ERR ", __VA_ARGS__)
-```
+## 规范对照（照 `cpp-algo-style` 执行）
 
-属于「语言限制导致的偏离」，文档里注明即不算违规。
+| 元素 | 规则 | 示例 |
+| --- | --- | --- |
+| 类 / 结构体 / 枚举 | PascalCase | `MiniController`, `FrameStats` |
+| 成员函数 | camelCase | `connect()`, `grabFrame()` |
+| 自由函数 | 对外 PascalCase，内部工具 snake_case | `CreateMiniController()`, `write_png()` |
+| 成员变量 | snake_case + 尾下划线 | `frame_count_`, `socket_path_` |
+| 局部变量 | snake_case | `frame_mat`, `elapsed_ms` |
+| 常量 | `k` 前缀 + PascalCase | `kDefaultTimeoutMs` |
+| 宏 | ALL_CAPS | `MAA_TRUE` |
+| 命名空间 | lowercase | `minicontroller` |
+| 头文件 | `#pragma once`，include 顺序：对应头 → 标准库 → 第三方 → `<MaaFramework/...>` `<MaaUtils/...>` → 本项目 `""` | — |
+| 日志 | `LogInfo << VAR(x)`，不手拼字符串 | — |
+| 错误处理 | 失败必打 `LogError`，不吞错 | — |
+| OpenCV | 必须经 `<MaaUtils/NoWarningCV.hpp>` | 禁止 `<opencv2/opencv.hpp>` |
 
 ## 六层阶梯
 
-| 层 | 你亲手做什么 | 关键 C API | 行数 | 我会问什么 |
+| 层 | 你亲手做什么 | 关键 API / 工具 | 行数 | 我会问什么 |
 | --- | --- | --- | --- | --- |
-| **L0 环境与最小程序** | 拿到 `include/` + `.so`，写 CMakeLists，链接成功，打印版本并连上 sway | `MaaVersion`, `MaaLinuxControllerCreate`, `MaaControllerPostConnection` | ~70 | 为什么 C 里 handle 都是不透明指针？谁负责释放？ |
-| **L1 截图** | 抓一帧 → 取编码字节 → 写盘 → 确认是 PNG，打印尺寸 | `MaaControllerPostScreencap`, `MaaImageBufferGetEncoded`, `...GetEncodedSize` | ~60 | 取「编码后」比取 raw 省了什么？代价是什么？ |
-| **L2 Tasker + Resource** | 加载资源，跑一个 `DirectHit + Click` 节点到 `Succeeded` | `MaaTaskerCreate`, `MaaResourcePostPath`, `MaaTaskerBindResource/BindController`, `MaaTaskerPostTask` | ~90 | 为什么 Tasker 必须同时绑 Resource 和 Controller？ |
-| **L3 CustomController 骨架** | 填 21 个回调里的最小集合，让框架用**你写的**控制器跑通 L2 的节点 | `MaaCustomControllerCreate` | ~150 | `get_features()` 为什么必须与实现一致？不一致会怎样？ |
-| **L4 输入原语** | 补 `swipe` / `click_key` / `scroll` / `relative_move` | 同一回调结构体 | ~150 | `relative_move` 你怎么保证不静默失败？ |
-| **L5 任务闭环** | 用 L3/L4 的控制器跑一次环境监测 | 纯 C 调用 pipeline | ~60 | 为什么 `__CameraScanMove*` 在普通游玩会变成攻击？ |
+| **L0 环境与最小程序** | 初始化 `MaaUtils` 子模块、拿到 MaaFramework SDK、CMake 链接成功、打印版本并连上 sway | `utils.h`、`MaaVersion`、`MaaLinuxControllerCreate` | ~120 | 为什么所有 handle 都要 RAII？谁释放、什么时候释放？ |
+| **L1 截图** | 抓一帧 → `to_mat` → 存 PNG → 打印尺寸/通道/耗时 | `ScopedImageBuffer`、`to_mat`、`cv::imwrite` | ~70 | `to_mat` 是拷贝还是视图？生命周期怎么保证？ |
+| **L2 Tasker + Resource** | 加载资源、跑一个 `DirectHit + Click` 节点到 `Succeeded` | `ScopedTasker`/`MaaTaskerCreate`、`MaaResourcePostPath`、`MaaTaskerPostTask` | ~110 | Tasker 为什么必须同时绑 Resource 和 Controller？ |
+| **L3 CustomController 骨架** | 实现 21 个回调里的最小集，让框架用**你写的**控制器跑通 L2 那个节点 | `MaaCustomControllerCreate` + 静态函数指针表 | ~180 | `get_features()` 与实现不一致会怎样？ |
+| **L4 输入原语** | 补 `swipe` / `click_key` / `scroll` / `relative_move` | 同一回调结构体 | ~170 | `relative_move` 你怎么保证不静默失败？ |
+| **L5 任务闭环** | 用自己的控制器跑一次环境监测（进拍照模式 → 扫描） | 纯 pipeline 调用 | ~70 | 为什么 `__CameraScanMove*` 在普通游玩会变成攻击？ |
 | **L6 对照上游** | 读 `MaaLinuxControlUnit` 源码，列「我 vs 它」差异表 | 只读 | — | 让你修相对移动，改哪一行？ |
 
-约 580 行 C 代码。每层可独立停下，停在任何一层都有可运行产物。
+约 720 行 C++。每层可独立停下。
 
-## 21 个回调（L3 全貌）
+## L3 的回调表（C++ 侧写法）
 
-```c
-MaaBool (*connect)(void*);
-MaaBool (*connected)(void*);
-MaaBool (*request_uuid)(void*, MaaStringBuffer*);
-MaaControllerFeature (*get_features)(void*);
-MaaBool (*start_app)(const char*, void*);
-MaaBool (*stop_app)(const char*, void*);
-MaaBool (*screencap)(void*, MaaImageBuffer*);
-MaaBool (*click)(int32_t, int32_t, void*);
-MaaBool (*swipe)(int32_t, int32_t, int32_t, int32_t, int32_t, void*);
-MaaBool (*touch_down)(int32_t, int32_t, int32_t, int32_t, void*);
-MaaBool (*touch_move)(int32_t, int32_t, int32_t, int32_t, void*);
-MaaBool (*touch_up)(int32_t, void*);
-MaaBool (*click_key)(int32_t, void*);
-MaaBool (*input_text)(const char*, void*);
-MaaBool (*key_down)(int32_t, void*);
-MaaBool (*key_up)(int32_t, void*);
-MaaBool (*scroll)(int32_t, int32_t, void*);
-MaaBool (*relative_move)(int32_t, int32_t, void*);
-MaaBool (*shell)(const char*, int64_t, void*, MaaStringBuffer*);
-MaaBool (*inactive)(void*);
-MaaBool (*get_info)(void*, MaaStringBuffer*);
+C API 是纯 C 的，C++ 里用**静态函数 + `void* trans_arg` 转发到自己的对象**：
+
+```cpp
+namespace minicontroller
+{
+
+struct MiniController
+{
+    MaaBool connect();
+    MaaBool screencap(MaaImageBuffer* out);
+    // ...
+    std::string socket_path_;
+    int frame_count_ = 0;
+};
+
+// 回调桥：把 void* 转回对象
+MaaBool MAA_CALL ConnectBridge(void* trans_arg);
+MaaBool MAA_CALL ScreencapBridge(void* trans_arg, MaaImageBuffer* buffer);
+// ...
+
+MaaCustomControllerCallbacks* MakeCallbacks();
+
+} // namespace minicontroller
 ```
 
-L3 只填必需项，其余留 `NULL`（框架会走默认行为）。**`get_features()` 决定框架是否把你的 `click` 改写成 `touch_down/up`** —— 这是 L3 最容易答错的一点。
+21 个回调的完整签名见 [PLAN.md 的历史版](docs/历史-工程计划-20261024.md) 或 `include/MaaFramework/Instance/MaaCustomController.h`。
 
-## 构建前置（L0 的第一件事）
+**L3 最容易答错的一点**：`get_features()` 返回 `UseMouseDownAndUpInsteadOfClick` 时，框架会**不再调用你的 `click()`**，改成调 `touch_down` + `touch_up`。声明了却不实现后两者，点击就全废。
 
-头文件与动态库不在系统里，需要：
+## L0 的三个前置（这是最容易被卡住的地方）
 
-1. 取 `include/MaaFramework/*`（11 个头文件）
-2. 取 `libMaaFwCore.so`（版本与 binding 对齐，当前 5.14.3）
+| 前置 | 难点 | 解法 |
+| --- | --- | --- |
+| `agent/cpp-algo/MaaUtils` 子模块 | 当前是空目录（未 init），而 `Logger.h`、`NoWarningCV.hpp` 都在里面 | `git -c http.proxy=http://127.0.0.1:7890 submodule update --init agent/cpp-algo/MaaUtils` |
+| MaaFramework SDK（头文件 + `.so`） | 不在系统里 | 从 release 包取，或从本机 `maafw` Python 包里挖 `.so`，头文件从仓库取 |
+| CMake 目标 | 要能独立编译，不能依赖 cpp-algo 的完整构建 | 独立 `CMakeLists.txt`，`target_link_libraries` 只链 MaaFwCore |
 
-L0 第一步就是**确认库的真实文件名与依赖**：
-
-```bash
-ls /usr/local/lib/python3.12/dist-packages/maa/*.so 2>/dev/null
-ldd <那个 .so> | grep -i maa
-```
-
-拿到名字再写最小 `CMakeLists.txt`，先只调 `MaaVersion()` 验证链接通，然后往下写。
+本机直连 github.com 不通，所有 `git submodule` / 下载都要带代理。
 
 ## 分工与验收
 
@@ -113,19 +118,19 @@ ldd <那个 .so> | grep -i maa
 | 我 | 给骨架与卡点提示、指出错误、验收、答「为什么」 |
 | 你 | 敲代码、编译、运行、讲清每层 |
 
-**两道关**：能跑（输出对）+ 能讲（答得出上表提问）。讲不清就回上一层，不硬推。每层在 `mini-c/NOTES.md` 写 3–5 行，用自己的话。
+**两道关**：能跑（输出对）+ 能讲（答得出上表提问）。讲不清就回上一层，不硬推。每层在 `mini-cpp/NOTES.md` 写 3–5 行，用自己的话。
 
 ## 时间表
 
 | 周 | 内容 |
 | --- | --- |
-| 第 1 周 | L0 + L1（环境、链接、第一帧） |
+| 第 1 周 | L0 + L1（子模块、链接、第一帧） |
 | 第 2 周 | L2（Tasker + Resource + 第一个节点） |
 | 第 3 周 | L3 + L4（自己的控制器 + 五种原语） |
 | 第 4 周 | L5 + L6（任务闭环 + 差异表） |
 
 ## 不在本计划范围内
 
-- 手写 CDP / WebSocket 客户端（C 里代价过高；需要页面级相对输入时，走 L3 的 `relative_move` 回调 + 上游 `CloudRelativeMove` 契约，见 [04](docs/04-云网页节点契约.md)）
+- 手写 CDP / WebSocket 客户端（需要页面级相对输入时，走 L3 的 `relative_move` 回调 + 上游 `CloudRelativeMove` 契约，见 [04](docs/04-云网页节点契约.md)）
 - 向上游提 PR
-- 把 C 代码塞进 `agent/cpp-algo`（那里只收 C++）
+- 改 `agent/cpp-algo` 现有代码（学习期只在 `tools/linux-adapt/mini-cpp/` 里写新文件）
