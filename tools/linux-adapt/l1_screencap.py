@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """L1 帧源层验收：MaaLinuxControlUnit / WlrScreencap 是否给出正确的 1280x720 帧。
 
-只读，不注入任何输入。判定项：
-  1. resolution == (1280, 720)，帧 shape == (720, 1280, 3)
-  2. 通道序：binding 声明是 BGR；用 grim 同协议参考帧交叉验证
-  3. 帧耗时分布（20 帧）
-  4. 静止画面下的帧间稳定性（均值标准差）
-  5. 与 grim 参考帧的相似度（NCC），确认不是黑帧/花屏/错缩放
+只读，不注入任何输入。
+
+判定 8 项（全部为 True 才算通过）：
+  1. connect           连上 sway（Wayland 合成器）
+  2. shape_1280x720    帧尺寸是 1280x720，不依赖 MaaControllerGetResolution
+  3. shape_hw3         形如 (720, 1280, 3)
+  4. not_blank         不是黑帧 / 纯色
+  5. stable            静止画面 20 帧的帧间均值标准差 < 2.0
+  6. fast_enough       单帧耗时中位数 < 500 ms
+  7. matches_grim      与 grim 参考帧的 NCC > 0.90
+  8. bgr_confirmed     BGR->RGB 的 NCC 高于按 RGB 直用
+
+记录项（不参与判定）：
+  resolution_api  MaaControllerGetResolution 的返回值；Linux 控制器当前返回 (0, 0)
+  start_app       上游 LinuxControlUnit 的启停实现状态；本层不探测
 
 用法：
     XDG_RUNTIME_DIR=/run/user/0 WAYLAND_DISPLAY=wayland-1 \
@@ -18,7 +27,6 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -27,43 +35,22 @@ import numpy as np
 from maa.controller import LinuxController
 from PIL import Image
 
+from harness.common import (
+    channel_means,
+    default_wlr_socket,
+    grim_capture,
+    ncc,
+    save_png,
+)
+
 SCREENCAP_WLR = 1  # MaaLinuxScreencapMethod_WlrScreencap
 INPUT_WLR = 1      # MaaLinuxInputMethod_Wlr
 
 
-def ncc(a: np.ndarray, b: np.ndarray) -> float:
-    """归一化互相关（灰度、零均值）。"""
-    a = a.astype(np.float64).ravel()
-    b = b.astype(np.float64).ravel()
-    a -= a.mean()
-    b -= b.mean()
-    denom = float(np.linalg.norm(a) * np.linalg.norm(b))
-    return float("nan") if denom == 0 else float(a.dot(b) / denom)
-
-
-def channel_means(img: np.ndarray) -> list[float]:
-    return [round(float(img[:, :, i].mean()), 3) for i in range(img.shape[2])]
-
-
-def grim_capture(out_path: Path) -> bool:
-    """用 grim 抓同一路 wlroots 输出作为参考（同 zwlr_screencopy 协议）。"""
-    try:
-        subprocess.run(["grim", str(out_path)], check=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return out_path.exists()
-    except Exception:
-        return False
-
-
-def save_png(img: np.ndarray, out_path: Path, bgr: bool = True) -> None:
-    """BGR -> RGB 后落盘。"""
-    arr = img[:, :, ::-1] if bgr and img.shape[2] == 3 else img
-    Image.fromarray(arr.astype(np.uint8)).save(out_path)
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--socket", default="/run/user/0/wayland-1")
+    ap.add_argument("--socket", default=default_wlr_socket(),
+                    help="Wayland socket；默认 $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY")
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--out", default="evidence-l1")
     args = ap.parse_args()
@@ -98,13 +85,17 @@ def main() -> int:
     result["connect_ms"] = round((time.time() - t0) * 1000, 1)
     print(f"[ ok ] connect  {result['connect_ms']} ms")
 
-    # --- 分辨率 ---
+    # --- 记录项：分辨率 API 与启停能力（都不参与判定）---
     try:
-        res = ctrl.resolution
+        res_api = ctrl.resolution
     except Exception:
-        res = None
-    result["resolution"] = list(res) if res else None
-    print(f"[info] resolution = {res}")
+        res_api = None
+    result["resolution_api"] = list(res_api) if res_api else None
+    result["start_app"] = {
+        "probed": False,
+        "note": "上游 LinuxControlUnit 的 start_app 仍为 TODO，本层不探测",
+    }
+    print(f"[info] resolution(API) = {res_api}  （记录项，不判定）")
 
     # --- 参考帧（grim） ---
     grim_path = out_dir / "ref-grim.png"
@@ -113,14 +104,11 @@ def main() -> int:
     # --- 抓 n 帧 ---
     frames: list[np.ndarray] = []
     times: list[float] = []
-    for i in range(args.n):
+    for _ in range(args.n):
         t = time.time()
-        r = ctrl.post_screencap().wait().get()
+        frames.append(ctrl.post_screencap().wait().get())
         times.append((time.time() - t) * 1000.0)
-        if i == 0:
-            frames.append(r)
-        else:
-            frames.append(r)
+
     first = frames[0]
     result["frame_shape"] = list(first.shape)
     result["frame_dtype"] = str(first.dtype)
@@ -154,10 +142,8 @@ def main() -> int:
         ref = np.asarray(Image.open(grim_path).convert("RGB"), dtype=np.uint8)
         result["grim_shape"] = list(ref.shape)
         if ref.shape[:2] == first.shape[:2]:
-            as_rgb = first[:, :, ::-1]           # 按 binding 声明：BGR -> RGB
-            as_is = first                        # 若当成 RGB 直接用
-            result["ncc_bgr2rgb"] = round(ncc(as_rgb, ref), 5)
-            result["ncc_as_is"] = round(ncc(as_is, ref), 5)
+            result["ncc_bgr2rgb"] = round(ncc(first[:, :, ::-1], ref), 5)
+            result["ncc_as_is"] = round(ncc(first, ref), 5)
             result["ch_means_ref_rgb"] = channel_means(ref)
             print(f"[info] NCC(frame BGR->RGB, grim) = {result['ncc_bgr2rgb']}")
             print(f"[info] NCC(frame 原样当作RGB, grim) = {result['ncc_as_is']}")
@@ -170,8 +156,7 @@ def main() -> int:
     # --- 判定 ---
     checks = result["checks"]
     checks["connect"] = True
-    checks["resolution_1280x720"] = (result["resolution"] == [1280, 720]
-                                     or (first.shape[1], first.shape[0]) == (1280, 720))
+    checks["shape_1280x720"] = (first.shape[1], first.shape[0]) == (1280, 720)
     checks["shape_hw3"] = (len(first.shape) == 3 and first.shape[2] == 3)
     checks["not_blank"] = 5.0 < float(first.mean()) < 250.0
     checks["stable"] = result["frame_mean_std"] < 2.0
