@@ -37,3 +37,11 @@ endfunction()
 
 maaend_add_tool(l0_env l0_env.cpp)
 maaend_add_tool(l1_screencap l1_screencap.cpp)
+maaend_add_tool(l2_task l2_task.cpp)
+
+# L2 需要一份最小资源（pipeline/nodes.json），构建后复制到输出目录，
+# 这样直接跑 ./l2_task 时默认的 ./l2-resource 指向可用资源。
+add_custom_command(TARGET l2_task POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/l2-resource"
+        "$<TARGET_FILE_DIR:l2_task>/l2-resource")

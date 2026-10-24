@@ -176,14 +176,15 @@ C++ 主线的三条硬要求（与工具的分界线就在这里）：
 | 验收 | ✅ PNG 能打开、1280×720、3 通道、`type=16`；median **16.13 ms**（docs/05 参考 16.2）；通道序经背景色实测为 BGR |
 | 产物 | [`mini-cpp/l1_screencap.cpp`](mini-cpp/l1_screencap.cpp) + 注释版 + [`study/L1-详读.md`](study/L1-详读.md) + [`study/L1-肉眼验收.md`](study/L1-肉眼验收.md) + [`verify-l1.sh`](verify-l1.sh) |
 
-### L2 Tasker + Resource（~110 行）
+### L2 Tasker + Resource（300 行，已完成 2026-10-25）
 
 | 项 | 内容 |
 | --- | --- |
-| 做什么 | 加载资源、绑 Resource 与 Controller、跑一个 `DirectHit + Click` 节点到 `Succeeded` |
-| 参考 | `[FW-2.2]`（`MaaTaskerCreate` / `MaaResourcePostPath` / `MaaTaskerPostTask`）`[FW-3.1]`（节点字段）`[FW-2.3]`（任务状态回调） |
-| 卡点 | ① 资源路径要指向**包含 `pipeline`/`image`/`model` 的目录**，指到 `pipeline` 子目录会加载不到模板 ② Tasker 未绑 Controller 就跑任务会失败 |
-| 验收 | 任务 `succeeded`，日志里能看到节点被执行 |
+| 做什么 | 加载资源、绑 Resource 与 Controller、跑一个 `DirectHit + Click` 节点到 `Succeeded`，并取回执行轨迹 |
+| 参考 | `[FW-2.2]`（`MaaTaskerCreate` / `MaaResourcePostBundle` / `MaaTaskerPostTask`）`[FW-3.1]`（节点字段）`[FW-2.3]`（节点级/任务级消息列表） |
+| 卡点 | ① 资源路径要指向**包含 `pipeline`/`image`/`model` 的目录**，指到 `pipeline` 子目录会加载到 0 个节点 ② Tasker 未绑 Controller 就跑任务会失败 ③ **节点级事件只走 `MaaTaskerAddContextSink`**，只挂 `AddSink` 收不到 `Node.*`（实测 2 vs 16）④ `pipeline_override` 传 `""` 会静默不执行 |
+| 验收 | ✅ 资源 2 节点；任务 `Succeeded`；执行轨迹 2 节点均 `completed=1`；任务级事件 2 条 / 节点级 16 条 |
+| 产物 | [`mini-cpp/l2_task.cpp`](mini-cpp/l2_task.cpp) + [`l2_task_annotated.cpp`](mini-cpp/l2_task_annotated.cpp)（预处理 md5 `56bebdbb…` 一致）+ [`l2-resource/`](mini-cpp/l2-resource) + [`study/L2-详读.md`](study/L2-详读.md) + [`verify-l2.sh`](verify-l2.sh) |
 
 ### L3 CustomController 骨架（~180 行）
 

@@ -1,0 +1,12 @@
+{
+    "L2Click": {
+        "recognition": "DirectHit",
+        "action": "Click",
+        "target": [640, 360, 1, 1],
+        "next": ["L2Done"]
+    },
+    "L2Done": {
+        "recognition": "DirectHit",
+        "action": "DoNothing"
+    }
+}
