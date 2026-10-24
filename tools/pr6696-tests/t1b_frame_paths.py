@@ -242,13 +242,16 @@ def main() -> int:
         probe.cdp.call("Emulation.clearDeviceMetricsOverride")
 
     print("\n判读")
-    best = min((s for s in summary.values() if s["compression_ratio"] > 20),
-               key=lambda s: s["total_ms"], default=None)
+    # 压缩比 = 像素字节 / payload 字节。比值越大说明画面越平（纯色图可达数百倍），
+    # 真实游戏画面通常在 1–20。T1 那次 550:1 的假数据就是靠这一条识别出来的。
+    usable = {k: v for k, v in summary.items() if v["compression_ratio"] < 100}
+    best = min(usable.values(), key=lambda s: s["total_ms"], default=None)
     if best:
-        fps = 1000.0 / best["total_ms"]
-        print(f"  最快可用通路：{best['total_ms']:.1f} ms/帧 → 上限 {fps:.1f} fps")
-    print("  total = 页面内(js) + base64 传输 + Python 解码，三者相加应与 total 接近")
-    print("  compression_ratio 太低（<20）说明画面接近纯色，该行数字不可用")
+        print(f"  最快通路：{best['total_ms']:.1f} ms/帧 → 上限 {1000.0 / best['total_ms']:.1f} fps")
+    flat = [k for k, v in summary.items() if v["compression_ratio"] >= 100]
+    if flat:
+        print(f"  疑似纯色画面，数据不可用：{', '.join(flat)}")
+    print("  total ≈ 页面内(js) + base64 传输 + Python 解码")
     print("  导航参考：190ms≈5.3fps、100ms≈10fps、60ms≈16.7fps（识别耗时不在此列）")
 
     evidence.write_json("summary.json", {
