@@ -1,9 +1,9 @@
 # L1 帧源验收 · 精读
 
-对象：`tools/linux-adapt/l1_screencap.py`（203 行）
+对象：`tools/linux-adapt/l1_screencap.py`（180 行）
 工具库：`tools/linux-adapt/harness/common.py`（65 行，L1 与 L2 共用）
 注释版：
-- [`study/l1_screencap_annotated.py`](l1_screencap_annotated.py)（267 行，**AST 与原文完全一致**，只加注释没改语句）
+- [`study/l1_screencap_annotated.py`](l1_screencap_annotated.py)（290 行，**AST 与原文完全一致**，只加注释没改语句）
 - [`study/harness_common_annotated.py`](harness_common_annotated.py)（110 行，同上）
 
 > 两份注释版顶部有一行 `# pyright: reportMissingImports=false, ...`：它们只是**阅读副本**，
@@ -35,23 +35,12 @@
 
 这是本层最重要的一条约定，改代码时别破坏它。
 
-| 类别 | 项 | 取值 | 参与 `result["ok"]` |
-| --- | --- | --- | --- |
-| 判定（8） | `connect` / `shape_1280x720` / `shape_hw3` / `not_blank` / `stable` / `fast_enough` / `matches_grim` / `bgr_confirmed` | `True` / `False` | 是 |
-| 记录（2） | `resolution_api` / `start_app` | 任意值 | 否 |
-| 跳过（0–2） | `matches_grim` / `bgr_confirmed`（缺 grim 时） | `None` | 否（但会计数） |
+| 类别 | 项 | 是否参与 `result["ok"]` |
+| --- | --- | --- |
+| 判定（8） | `connect` / `shape_1280x720` / `shape_hw3` / `not_blank` / `stable` / `fast_enough` / `matches_grim` / `bgr_confirmed` | 是 |
+| 记录（2） | `resolution_api` / `start_app` | 否 |
 
-三种状态对应三种责任：**判定项 = 代码对不对，记录项 = 上游缺什么，跳过项 = 环境缺什么**。
-
-两个具体决定：
-
-- `resolution` 不判定：`ctrl.resolution` 在本控制器返回 `(0, 0)`，是上游 API 未补全。以前用「帧 shape 兜底」让它恒真，等于把缺口藏在一条永远成立的断言里；现在 shape 单独判，resolution 只记录。
-- 缺 grim 写 `None` 而不是 `False`，也不是「从 checks 里删掉」：
-  - 写 `False` → 环境缺工具冒充代码失败；
-  - 直接删 → 分母变小，`6/6` 看起来比 `6/8` 还绿，等于把覆盖面缩水藏起来；
-  - 写 `None` → 显式打印 `[skip]` + 安装命令，汇总带 `skipped=N`，事后能算出当时到底验了几项。
-
-要强制「必须验到通道序」时加 `--require-grim`，缺 grim 直接退出码 1。
+为什么拆：`ctrl.resolution` 在本控制器返回 `(0, 0)`，以前用「帧 shape 兜底」让它通过，等于把「上游 API 未补全」这个事实藏在一条恒真的断言里。现在 shape 单独判，resolution 只记录——**记录项可以一直是坏消息，但不会污染通过率**。
 
 ## 怎么读
 
@@ -124,9 +113,7 @@
 
 ### 块 5 · 参考帧与抓帧
 
-`grim_capture()` 必须排在抓帧循环**之前**：grim 也走 `zwlr-screencopy`，会和我们的截图抢同一个合成器；顺序执行时它不在计时区间内（不影响 16.2 ms 这个数字），并行则会把耗时统计污染掉。
-
-拿不到 grim 时不是「少两项、其余照过」，而是那两项写成 `None` 并打 `[skip]`——见下面「判定」块。
+`grim_capture()` 拿不到 grim 时**不算失败**，只是少两项交叉验证——`checks` 里那两项会自动不加入，避免环境缺工具被判成代码错。
 
 `post_screencap().wait().get()` 是 MaaFramework 的固定三段式：提交 → 等 → 取。`get()` 在 `wait()` 之前拿到的是空结果。
 
@@ -166,18 +153,7 @@ A 明显高于 B，通道序被自证。`checks["bgr_confirmed"]` 就是「A > B
 
 `shape_1280x720` 只看 `first.shape`，不再 `or` 上 `resolution`。`not_blank` 上下界一起判（纯黑与过曝都是「没拿到帧」）。`fast_enough` 用 500 ms 这个很宽松的阈值，只用来抓「完全没走 wlroots 协议」这类异常。
 
-汇总时只对非 `None` 项求 `all`，并把 `passed / judged / skipped` 三个数都落盘。输出是三态：
-
-```
-  [PASS] shape_1280x720
-  [SKIP] matches_grim
-  [SKIP] bgr_confirmed
-L1_OK  passed=6/6 (skipped=2)
-```
-
-`--require-grim` 把「跳过」这条后路关掉：缺 grim 直接 `exit 1`（环境问题），不进判定流程。
-
-退出码三分：`0` 通过、`1` 环境或参数错（含 `--require-grim` 缺 grim）、`2` 验收不通过。区分它们是为了让调用方知道「该修环境还是该修代码」。
+退出码三分：`0` 通过、`1` 环境或参数错、`2` 验收不通过。区分它们是为了让调用方知道「该修环境还是该修代码」。
 
 ## 函数索引
 
@@ -208,14 +184,13 @@ L1_OK  passed=6/6 (skipped=2)
 | [L1] | 本仓库 `tools/linux-adapt/README.md` | 本次实测数据（8/8、16.2 ms、NCC 1.0） |
 | [UV] | 本仓库 `pyproject.toml` + PR [#4867](https://github.com/MaaEnd/MaaEnd/pull/4867) / [#6649](https://github.com/MaaEnd/MaaEnd/pull/6649) | 依赖分组、`uv run` 口径、Python 3.14 下限 |
 
-## 自测 6 题
+## 自测 5 题
 
 1. 为什么必须 `post_screencap().wait().get()`，不能省掉 `wait()`？
 2. `ncc()` 里为什么先 `astype(np.float64)` 再做减法？
 3. `NCC(BGR→RGB)=1.0`、`NCC(原样)=0.757`，这两个数分别证明了什么？
 4. `resolution_api` 为什么只记录、不参与判定？把它改成判定项会怎样？
-5. 缺 grim 时为什么写 `None`，而不是 `False`，也不是从 `checks` 里删掉？
-6. 退出码 `0 / 1 / 2` 分别代表什么，为什么要把它们分开？
+5. 退出码 `0 / 1 / 2` 分别代表什么，为什么要把它们分开？
 
 <details>
 <summary>答案</summary>
@@ -224,8 +199,7 @@ L1_OK  passed=6/6 (skipped=2)
 2. `uint8` 相减会向下溢出（`0-5` 变 `251`），必须在减法前升到浮点。
 3. 前者证明「帧确实是 BGR，翻成 RGB 后与标准答案逐像素一致」；后者说明「若把它当 RGB 用」相似度明显更低，从而排除「本来就是 RGB」这个假设。两者对比才构成自证。
 4. 因为它实测返回 `(0, 0)`，是上游 API 未补全，不是我们这层能修的事。若改成判定项，L1 会永远 FAIL；若用 `or` 兜底让它恒真，又会把缺口藏起来。记录项是第三种选择：事实留着，通过与否不受它影响。
-5. `False` 会让环境问题冒充代码失败；直接删会让分母变小（`6/6` 比 `6/8` 更绿，覆盖面缩水被藏起来）。写 `None` 则保住分母、显式打 `[skip]`、并给出安装命令，事后能从 `skipped` 计数看出当时少验了什么。
-6. `0` 通过、`1` 环境/参数错（socket 连不上、配置非法、`--require-grim` 缺 grim）、`2` 验收不通过（帧不对）。分开是为了让调用方区分「修环境」还是「修代码」。
+5. `0` 通过、`1` 环境/参数错（socket 连不上、配置非法）、`2` 验收不通过（帧不对）。分开是为了让调用方区分「修环境」还是「修代码」。
 
 </details>
 
@@ -240,9 +214,6 @@ uv run python tools/linux-adapt/l1_screencap.py --n 20
 
 # 本机 WSL 无 uv 时（系统 Python 3.12 + 已装等价版本依赖）
 python3 tools/linux-adapt/l1_screencap.py --n 20
-
-# 严格模式：没有 grim 就直接失败（出交付证据时用）
-python3 tools/linux-adapt/l1_screencap.py --n 20 --require-grim
 ```
 
 产物在 `evidence-l1/`：`l1.json`、`frame-bgr2rgb.png`、`ref-grim.png`（均已 gitignore）。
