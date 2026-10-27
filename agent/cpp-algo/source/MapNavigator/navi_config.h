@@ -14,7 +14,10 @@ constexpr int32_t kWorkHeight = 720;
 constexpr double kNavigationCameraMinConfidence = 0.3;
 
 // --- ActionWrapper Constants ---
-constexpr double kTurn360UnitsPerWidth = 2.23006;
+// 每 360 度对应的横向输入单位 / 屏宽。原值 2.23006 假设 1280 宽下 7.93 单位/度。
+// 2026-10-27 homesrv 实测（720p，Linux/Wlr 输入）：30 单位 × 8 步共 +56.8°，约 4.23 单位/度，
+// 旧系数偏大 1.9 倍 → 每条转向指令都超调，且单次拖拽在 ~31° 处被游戏钳位，导航反复 off-route。
+constexpr double kTurn360UnitsPerWidth = 1.1886;
 constexpr double kTurnDegreesPerCircle = 360.0;
 constexpr double kPitchDegreesPerRange = 180.0;
 
