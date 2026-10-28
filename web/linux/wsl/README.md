@@ -75,7 +75,7 @@ wsl -d Ubuntu-24.04 -u root -- bash -c "pkill -f 'user-data-dir=/root/chrome-pro
    `_AutoEcoFarmMoveToTargetErr` / `_AutoEcoFarmJumpBack`，而旧 `resource_linux` 的 6 个节点 next 指向它们
    → PipelineChecker 整包校验失败，且会**污染后续所有层的加载**（连带 `resource_web` 一起 False）。
    先跑 `fix_resource_linux.py`（迭代剔除悬空 next），再用 `verify_resource.py` 确认 5 个路径 loaded 全 True。
-   根治办法：升级时也刷新平台层（`resource_linux`/`resource_adb`/`resource_cloud_adb`/`resource_macos`/`resource_playcover`），
+   根治办法：升级时也刷新平台层（`resource_linux`/`resource_adb`/`resource_cloud`/`resource_macos`；`resource_playcover` 在 #6885 之后已并入 `resource_adb`），
    homesrv 的 `auto_update.sh` 目前只换 `resource`/`interface.json`/`agent`/`maafw`，存在同样的漂移。
 9. **「开始游戏」不是内置任务，要自己接进去**
    base 的 `tasks/` 里没有任何 Web 任务（`interface.json` 的 `task` 是空数组，任务全靠 `import` 里的 `tasks/*.json`）。

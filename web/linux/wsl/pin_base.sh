@@ -9,7 +9,7 @@ LOG=/root/maaend/pin.log
 
 log() { echo "[$(date '+%F %T')] $*" | tee -a "$LOG"; }
 
-ITEMS="resource resource_linux resource_adb resource_cloud_adb resource_macos resource_playcover locales interface.json agent maafw"
+ITEMS="resource resource_linux resource_adb resource_cloud resource_macos locales interface.json agent maafw"
 
 ver() { python3 -c "import json,sys;print(json.load(open('$1',encoding='utf-8-sig')).get('version','?'))" 2>/dev/null || echo "?"; }
 
