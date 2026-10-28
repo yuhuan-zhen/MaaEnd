@@ -14,6 +14,7 @@
 做法：用 cpp-algo 的 MapLocateRecognition 读 camRot（小地图箭头=镜头朝向），
 每步前后各读一次，Δ 即为这一拖拽转过的角度 → units_per_deg = dx / Δ。
 """
+import contextlib
 import os
 import re
 import sys
@@ -155,10 +156,8 @@ def main():
             log("        折算 %.3f 单位/度；若要改常数 kTurn360UnitsPerWidth = %.4f"
                 % (dx / avg, (dx / avg) * 360.0 / 1280.0))
     for p in [p for _c, p in pairs if p]:
-        try:
+        with contextlib.suppress(Exception):
             p.terminate()
-        except Exception:
-            pass
     return 0
 
 
