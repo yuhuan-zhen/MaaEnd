@@ -36,7 +36,7 @@ STARTUP = {
 
 # 挡屏：网页特有的遮罩/弹窗 —— 抹平注入 + launcher 处理
 BLOCKER = {
-    "WebCloseRewards", "WebAnyExitEsc", "__ScenePrivateCloudBackPill",
+    "WebCloseRewards", "WebAnyExitEsc",
     "__ScenePrivateCloudClickToContinue", "WebCloseProtocolPass",
 }
 

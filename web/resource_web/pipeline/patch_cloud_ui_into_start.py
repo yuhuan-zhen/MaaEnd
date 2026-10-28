@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """把安卓云那套云 UI 节点接进我们的启动链。
 
-resource_cloud_adb 里云专有的两个节点，我们已经在 web 层抄了一份：
+resource_cloud（原 resource_cloud_adb，#6885 改名）里云专有的节点，我们已经在 web 层抄了一份：
   __ScenePrivateCloudClickToContinue  底部「点击屏幕继续」（云串流切场景时会挡住游戏）
-  __ScenePrivateCloudBackPill         面板右上角「← 返回」胶囊
+原 `__ScenePrivateCloudBackPill`（面板右上角「← 返回」胶囊）在云网页帧上实测最高 0.622（0/36 命中），
+无法跨客户端复用、也没有任何节点引用，已从 nodes.json 删除。
 它们和「开始游戏」是同一类东西：云平台 UI，不属于游戏本体，必须由云层处理。
 
 接法：
@@ -16,7 +17,7 @@ import sys
 P = sys.argv[1] if len(sys.argv) > 1 else "/root/maaend/web/resource_web/pipeline/nodes.json"
 d = json.load(open(P, encoding="utf-8"))
 
-for k in ("__ScenePrivateCloudClickToContinue", "__ScenePrivateCloudBackPill"):
+for k in ("__ScenePrivateCloudClickToContinue",):
     v = d.get(k)
     print("== %s\n   %s" % (k, json.dumps(v, ensure_ascii=False)[:300] if v else "<缺失>"))
 

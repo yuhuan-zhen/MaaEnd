@@ -278,26 +278,8 @@
     "post_delay": 800,
     "max_hit": 3
   },
-  "__ScenePrivateCloudBackPill": {
-    "desc": "【云串流】面板右上角「← 返回」胶囊按钮（取自 resource_cloud_adb，图片在 base 里已有）",
-    "recognition": {
-      "type": "TemplateMatch",
-      "param": {
-        "roi": [
-          900,
-          0,
-          380,
-          187
-        ],
-        "template": [
-          "AutoSell/FriendsPricesBack.png"
-        ],
-        "threshold": 0.8
-      }
-    }
-  },
   "__ScenePrivateCloudClickToContinue": {
-    "desc": "【云串流】底部「点击屏幕继续」提示（取自 resource_cloud_adb）",
+    "desc": "【云串流】底部「点击屏幕继续」提示（沿用原 resource_cloud_adb 节点，现云层已并入 resource_cloud）",
     "recognition": {
       "type": "OCR",
       "param": {

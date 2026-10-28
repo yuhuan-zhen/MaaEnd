@@ -5,6 +5,23 @@
 
 ---
 
+## 2026-10-28 · 跟进上游 #6885（云资源包改名 + 触屏退出并入 resource_adb）
+
+### 结论先行
+
+- 上游 `MaaEnd/MaaEnd#6885` 已合并（v2 `7467dcf0d`）：`resource_cloud_adb/` → `resource_cloud/`，
+  云层自己的 `SceneManager/SceneCommon.json` 删除，退出入口（ExitPhoto / BackPill / ClickToContinue）并入 `resource_adb`。
+- 上游同一时期把 `resource_playcover/` 并入 `resource_adb`（PlayCover 控制器改为 attach `./resource_adb`）。
+- 我们侧受影响的是**部署目录清单**（`auto_update.sh` / `pin_base.sh` / WSL README）和**覆盖层注释/死节点**；
+  `__ScenePrivateAnyExit` 仍是网页端自己的 ESC 方案，不依赖上游触摸退出节点。
+- `__ScenePrivateCloudBackPill` 在云网页帧上实测最高 0.622（0/36 命中）、无任何节点引用 → 删除（`split_overlay.py` 同步）。
+
+### 本分支
+
+`feat/cloud-web-post-6885`，基线 `upstream/v2` @ `41b969f35`（含 #6885、#6914），再合入 `feat/web-linux-layer`（唯一冲突 `navi_config.h`，取实测 1.1886 + 上游注释风格）。
+
+---
+
 ## 2026-10-23 · WSL 调试环境从 0 到「只差标题页」
 
 ### 结论先行

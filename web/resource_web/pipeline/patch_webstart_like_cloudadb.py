@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """照安卓云的做法：web 层只留「点开始游戏」+ 云 UI 覆盖，进入游戏交给 base 的 __ScenePrivateLogin 链。
 
-依据 resource_cloud_adb 的设计：云专有节点只有 2 个
-  __ScenePrivateCloudBackPill      面板右上角「← 返回」胶囊
+依据 resource_cloud（原 resource_cloud_adb，#6885 改名）的设计：云专有节点只剩 1 个
   __ScenePrivateCloudClickToContinue 底部「点击屏幕继续」
+（原 `__ScenePrivateCloudBackPill` 在云网页帧实测 0/36 命中、无引用，已删）
 游戏的登录/继续/月卡/维护/成功判定全部复用平台链（安卓=ADB 链，我们=base 的 __ScenePrivateLogin*）。
 理由：点完「开始游戏」之后，云串流里跑的是**真正的游戏客户端**，UI 与 PC 端一致，
 所以 base 的 login 链（LoginExit 模板 / Continue / ContinueDisappeared / MonthlyPass / Success）本该直接可用。
