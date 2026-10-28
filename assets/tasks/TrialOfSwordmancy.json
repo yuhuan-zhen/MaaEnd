@@ -9,10 +9,13 @@
                 "regional_development"
             ],
             "controller": [
+                "ADB",
+                "CloudADB",
                 "CloudWeb",
                 "Linux-Gamescope",
                 "Linux-ScreenCast",
                 "Linux-Wlroots",
+                "PlayCover",
                 "Win32-Front"
             ],
             "option": [

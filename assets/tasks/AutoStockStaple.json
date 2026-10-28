@@ -131,8 +131,7 @@
                         "AutoStockReserveValleyIV",
                         "AutoStockBuyDailyGoodsValleyIV",
                         "AutoStockBuyStockFactoryGoodsValleyIV",
-                        "AutoStockBuyCulturalGoodsValleyIV",
-                        "AutoStockMinDiscountValleyIV"
+                        "AutoStockBuyCulturalGoodsValleyIV"
                     ],
                     "pipeline_override": {
                         "AutoStockStapleValleyIV": {
@@ -183,7 +182,9 @@
                     "option": [
                         "AutoStockBuyDailyGoodsValleyIVItems",
                         "AutoStockBuyDailyGoodsValleyIVEngravingPermitLimit",
-                        "AutoStockBuyDailyGoodsValleyIVFoodAndBuffLimit"
+                        "AutoStockMinDiscountValleyIVEngravingPermit",
+                        "AutoStockBuyDailyGoodsValleyIVFoodAndBuffLimit",
+                        "AutoStockMinDiscountValleyIVDaily"
                     ]
                 },
                 {
@@ -202,7 +203,7 @@
                     "label": "$option.CreditShoppingItems.cases.ValleyEngravingPermit.label",
                     "icon": "resource/image/UI/Item/item_gem_stable_energy_point_tundra.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameEngravingPermit": {
                             "attach": {
                                 "valley_engraving_permit": [
                                     "谷地刻写券",
@@ -220,7 +221,7 @@
                     "label": "$option.CreditShoppingItems.cases.KunstTube.label",
                     "icon": "resource/image/UI/Item/item_bottled_insec2_2.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "kunst_tube": [
                                     "附术铁瓶",
@@ -238,7 +239,7 @@
                     "label": "$option.CreditShoppingItems.cases.JakubsLegacy.label",
                     "icon": "resource/image/UI/Item/item_agrange_1_erhound_1_sp_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "jakubs_legacy": [
                                     "雅各布的遗产",
@@ -256,7 +257,7 @@
                     "label": "$option.CreditShoppingItems.cases.PulledSlugMeat.label",
                     "icon": "resource/image/UI/Item/item_slimeml_1_erhound_1_agfly_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "pulled_slug_meat": [
                                     "手撕虫肉",
@@ -274,7 +275,7 @@
                     "label": "$option.CreditShoppingItems.cases.HazefyreBlossom.label",
                     "icon": "resource/image/UI/Item/item_erhound_1_agmelee_1_moss_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "hazefyre_blossom": [
                                     "雾火之花",
@@ -292,7 +293,7 @@
                     "label": "$option.CreditShoppingItems.cases.CartilageTack.label",
                     "icon": "resource/image/UI/Item/item_lbmob_1_lbshamman_1_sp_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "cartilage_tack": [
                                     "软骨饼干",
@@ -310,7 +311,7 @@
                     "label": "$option.CreditShoppingItems.cases.CosmoMeltoJelly.label",
                     "icon": "resource/image/UI/Item/item_agfly_1_agmelee_1_moss_2_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "cosmo_melto_jelly": [
                                     "星融果冻",
@@ -334,7 +335,7 @@
                     "name": "ValleyEngravingPermitLimit",
                     "label": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsValleyIVEngravingPermitLimit.inputs.ValleyEngravingPermitLimit.label",
                     "description": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsValleyIVEngravingPermitLimit.inputs.ValleyEngravingPermitLimit.description",
-                    "default": "20",
+                    "default": "200",
                     "pipeline_type": "int",
                     "verify": "^(?:0|[1-9]\\d{0,3})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsValleyIVEngravingPermitLimit.inputs.ValleyEngravingPermitLimit.pattern_msg"
@@ -361,6 +362,233 @@
                 }
             }
         },
+        "AutoStockMinDiscountValleyIVEngravingPermit": {
+            "type": "select",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountValleyIVEngravingPermit.label",
+            "cases": [
+                {
+                    "name": "Any",
+                    "label": "$option.DiscountValue.cases.Any.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "type": "ColorMatch",
+                                "param": {
+                                    "roi": "AutoStockInStapleItemNameEngravingPermit",
+                                    "roi_offset": [
+                                        37,
+                                        -190,
+                                        10,
+                                        28
+                                    ],
+                                    "lower": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "upper": [
+                                        255,
+                                        255,
+                                        255
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-95%",
+                    "label": "$option.DiscountValue.cases.-95%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-90%",
+                    "label": "$option.DiscountValue.cases.-90%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-85%",
+                    "label": "$option.DiscountValue.cases.-85%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-80%",
+                    "label": "$option.DiscountValue.cases.-80%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-75%",
+                    "label": "$option.DiscountValue.cases.-75%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-70%",
+                    "label": "$option.DiscountValue.cases.-70%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-65%",
+                    "label": "$option.DiscountValue.cases.-65%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-50%",
+                    "label": "$option.DiscountValue.cases.-50%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60",
+                                        "-55",
+                                        "-50"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "-50%"
+        },
         "AutoStockBuyDailyGoodsValleyIVFoodAndBuffLimit": {
             "type": "input",
             "label": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsValleyIVFoodAndBuffLimit.label",
@@ -372,7 +600,7 @@
                     "description": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsValleyIVFoodAndBuffLimit.inputs.ValleyFoodAndBuffLimit.description",
                     "default": "20",
                     "pipeline_type": "int",
-                    "verify": "^(?:0|[1-9]\\d{0,3})$",
+                    "verify": "^(?:0|[1-9]\\d{0,5})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsValleyIVFoodAndBuffLimit.inputs.ValleyFoodAndBuffLimit.pattern_msg"
                 }
             ],
@@ -487,6 +715,233 @@
                 }
             }
         },
+        "AutoStockMinDiscountValleyIVDaily": {
+            "type": "select",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountValleyIVDaily.label",
+            "cases": [
+                {
+                    "name": "Any",
+                    "label": "$option.DiscountValue.cases.Any.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "type": "ColorMatch",
+                                "param": {
+                                    "roi": "AutoStockInStapleItemNameDaily",
+                                    "roi_offset": [
+                                        37,
+                                        -190,
+                                        10,
+                                        28
+                                    ],
+                                    "lower": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "upper": [
+                                        255,
+                                        255,
+                                        255
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-95%",
+                    "label": "$option.DiscountValue.cases.-95%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-90%",
+                    "label": "$option.DiscountValue.cases.-90%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-85%",
+                    "label": "$option.DiscountValue.cases.-85%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-80%",
+                    "label": "$option.DiscountValue.cases.-80%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-75%",
+                    "label": "$option.DiscountValue.cases.-75%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-70%",
+                    "label": "$option.DiscountValue.cases.-70%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-65%",
+                    "label": "$option.DiscountValue.cases.-65%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-50%",
+                    "label": "$option.DiscountValue.cases.-50%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60",
+                                        "-55",
+                                        "-50"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "-50%"
+        },
         "AutoStockBuyStockFactoryGoodsValleyIV": {
             "type": "switch",
             "label": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsValleyIV.label",
@@ -496,7 +951,8 @@
                     "name": "Yes",
                     "option": [
                         "AutoStockBuyStockFactoryGoodsValleyIVItems",
-                        "AutoStockBuyStockFactoryGoodsValleyIVDetectorCompassLimit"
+                        "AutoStockBuyStockFactoryGoodsValleyIVDetectorCompassLimit",
+                        "AutoStockMinDiscountValleyIVIndustrial"
                     ]
                 },
                 {
@@ -515,7 +971,7 @@
                     "label": "$option.CreditShoppingItems.cases.KeenValleyDetector.label",
                     "icon": "resource/image/UI/Item/item_tundra_detector_trchest_3.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameIndustrial": {
                             "attach": {
                                 "keen_valley_detector": [
                                     "新锐谷地探物器",
@@ -533,7 +989,7 @@
                     "label": "$option.CreditShoppingItems.cases.KeenValleyCompass.label",
                     "icon": "resource/image/UI/Item/item_tundra_detector_coin_3.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameIndustrial": {
                             "attach": {
                                 "keen_valley_compass": [
                                     "新锐谷地罗盘",
@@ -561,7 +1017,7 @@
                     "name": "ValleyDetectorCompassLimit",
                     "label": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsValleyIVDetectorCompassLimit.inputs.ValleyDetectorCompassLimit.label",
                     "description": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsValleyIVDetectorCompassLimit.inputs.ValleyDetectorCompassLimit.description",
-                    "default": "20",
+                    "default": "50",
                     "pipeline_type": "int",
                     "verify": "^(?:0|[1-9]\\d{0,3})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsValleyIVDetectorCompassLimit.inputs.ValleyDetectorCompassLimit.pattern_msg"
@@ -606,6 +1062,233 @@
                 }
             }
         },
+        "AutoStockMinDiscountValleyIVIndustrial": {
+            "type": "select",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountValleyIVIndustrial.label",
+            "cases": [
+                {
+                    "name": "Any",
+                    "label": "$option.DiscountValue.cases.Any.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "type": "ColorMatch",
+                                "param": {
+                                    "roi": "AutoStockInStapleItemNameIndustrial",
+                                    "roi_offset": [
+                                        37,
+                                        -190,
+                                        10,
+                                        28
+                                    ],
+                                    "lower": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "upper": [
+                                        255,
+                                        255,
+                                        255
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-95%",
+                    "label": "$option.DiscountValue.cases.-95%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-90%",
+                    "label": "$option.DiscountValue.cases.-90%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-85%",
+                    "label": "$option.DiscountValue.cases.-85%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-80%",
+                    "label": "$option.DiscountValue.cases.-80%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-75%",
+                    "label": "$option.DiscountValue.cases.-75%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-70%",
+                    "label": "$option.DiscountValue.cases.-70%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-65%",
+                    "label": "$option.DiscountValue.cases.-65%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-50%",
+                    "label": "$option.DiscountValue.cases.-50%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60",
+                                        "-55",
+                                        "-50"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "-50%"
+        },
         "AutoStockBuyCulturalGoodsValleyIV": {
             "type": "switch",
             "label": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsValleyIV.label",
@@ -615,7 +1298,8 @@
                     "name": "Yes",
                     "option": [
                         "AutoStockBuyCulturalGoodsValleyIVItems",
-                        "AutoStockBuyCulturalGoodsValleyIVGiftLimit"
+                        "AutoStockBuyCulturalGoodsValleyIVGiftLimit",
+                        "AutoStockMinDiscountValleyIVCultural"
                     ]
                 },
                 {
@@ -634,7 +1318,7 @@
                     "label": "$option.CreditShoppingItems.cases.BreezeOfKjersch.label",
                     "icon": "resource/image/UI/Item/item_gift_tundra_4.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "breeze_of_kjersch": [
                                     "耶尔什微风",
@@ -652,7 +1336,7 @@
                     "label": "$option.CreditShoppingItems.cases.TidestoneSpecimen.label",
                     "icon": "resource/image/UI/Item/item_gift_tundra_5.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "tidestone_specimen": [
                                     "浪潮海石",
@@ -670,7 +1354,7 @@
                     "label": "$option.CreditShoppingItems.cases.SimonchShawl.label",
                     "icon": "resource/image/UI/Item/item_gift_tundra_6.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "simonch_shawl": [
                                     "塞梦珂披巾",
@@ -688,7 +1372,7 @@
                     "label": "$option.CreditShoppingItems.cases.FrontiersWatch.label",
                     "icon": "resource/image/UI/Item/item_gift_tundra_7.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "frontiers_watch": [
                                     "《前沿瞭望》",
@@ -706,7 +1390,7 @@
                     "label": "$option.CreditShoppingItems.cases.AuryleneCamera.label",
                     "icon": "resource/image/UI/Item/item_gift_tundra_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "aurylene_camera": [
                                     "醚质相机",
@@ -724,7 +1408,7 @@
                     "label": "$option.CreditShoppingItems.cases.CosmicGatePuzzle.label",
                     "icon": "resource/image/UI/Item/item_gift_tundra_2.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "cosmic_gate_puzzle": [
                                     "星门锁",
@@ -742,7 +1426,7 @@
                     "label": "$option.CreditShoppingItems.cases.SurfingFestivalTicket.label",
                     "icon": "resource/image/UI/Item/item_gift_tundra_3.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "surfing_festival_ticket": [
                                     "冲浪大赛门票",
@@ -766,7 +1450,7 @@
                     "name": "ValleyGiftLimit",
                     "label": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsValleyIVGiftLimit.inputs.ValleyGiftLimit.label",
                     "description": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsValleyIVGiftLimit.inputs.ValleyGiftLimit.description",
-                    "default": "20",
+                    "default": "50",
                     "pipeline_type": "int",
                     "verify": "^(?:0|[1-9]\\d{0,3})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsValleyIVGiftLimit.inputs.ValleyGiftLimit.pattern_msg"
@@ -901,19 +1585,19 @@
                 }
             }
         },
-        "AutoStockMinDiscountValleyIV": {
+        "AutoStockMinDiscountValleyIVCultural": {
             "type": "select",
-            "label": "$option.DiscountValue.label",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountValleyIVCultural.label",
             "cases": [
                 {
                     "name": "Any",
                     "label": "$option.DiscountValue.cases.Any.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "type": "ColorMatch",
                                 "param": {
-                                    "roi": "AutoStockInStapleItemName",
+                                    "roi": "AutoStockInStapleItemNameCultural",
                                     "roi_offset": [
                                         37,
                                         -190,
@@ -939,7 +1623,7 @@
                     "name": "-95%",
                     "label": "$option.DiscountValue.cases.-95%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -956,7 +1640,7 @@
                     "name": "-90%",
                     "label": "$option.DiscountValue.cases.-90%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -974,7 +1658,7 @@
                     "name": "-85%",
                     "label": "$option.DiscountValue.cases.-85%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -993,7 +1677,7 @@
                     "name": "-80%",
                     "label": "$option.DiscountValue.cases.-80%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -1013,7 +1697,7 @@
                     "name": "-75%",
                     "label": "$option.DiscountValue.cases.-75%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -1034,7 +1718,7 @@
                     "name": "-70%",
                     "label": "$option.DiscountValue.cases.-70%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -1056,7 +1740,7 @@
                     "name": "-65%",
                     "label": "$option.DiscountValue.cases.-65%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -1076,10 +1760,34 @@
                     }
                 },
                 {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "-50%",
                     "label": "$option.DiscountValue.cases.-50%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsValleyIV": {
+                        "AutoStockInStapleItemDiscountsValleyIVCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -1115,8 +1823,7 @@
                         "AutoStockReserveWuling",
                         "AutoStockBuyDailyGoodsWuling",
                         "AutoStockBuyStockFactoryGoodsWuling",
-                        "AutoStockBuyCulturalGoodsWuling",
-                        "AutoStockMinDiscountWuling"
+                        "AutoStockBuyCulturalGoodsWuling"
                     ],
                     "pipeline_override": {
                         "AutoStockStapleWuling": {
@@ -1167,7 +1874,9 @@
                     "option": [
                         "AutoStockBuyDailyGoodsWulingItems",
                         "AutoStockBuyDailyGoodsWulingEngravingPermitLimit",
-                        "AutoStockBuyDailyGoodsWulingFoodAndBuffLimit"
+                        "AutoStockMinDiscountWulingEngravingPermit",
+                        "AutoStockBuyDailyGoodsWulingFoodAndBuffLimit",
+                        "AutoStockMinDiscountWulingDaily"
                     ]
                 },
                 {
@@ -1186,7 +1895,7 @@
                     "label": "$option.CreditShoppingItems.cases.WulingEngravingPermit.label",
                     "icon": "resource/image/UI/Item/item_gem_stable_energy_point_wuling.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameEngravingPermit": {
                             "attach": {
                                 "wuling_engraving_permit": [
                                     "武陵刻写券",
@@ -1204,7 +1913,7 @@
                     "label": "$option.CreditShoppingItems.cases.FortifyingInfusion.label",
                     "icon": "resource/image/UI/Item/item_corp3_grass1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "fortifying_infusion": [
                                     "正本补元汤剂",
@@ -1222,7 +1931,7 @@
                     "label": "$option.CreditShoppingItems.cases.GardenFriedRice.label",
                     "icon": "resource/image/UI/Item/item_corp4_grass2_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "garden_fried_rice": [
                                     "锦素炒饭",
@@ -1240,7 +1949,7 @@
                     "label": "$option.CreditShoppingItems.cases.MasterPansEggPudding.label",
                     "icon": "resource/image/UI/Item/item_hscrane_1_hsmob_1_grass_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "master_pans_egg_pudding": [
                                     "潘师傅蛋羹",
@@ -1258,7 +1967,7 @@
                     "label": "$option.CreditShoppingItems.cases.EchoingRemedy.label",
                     "icon": "resource/image/UI/Item/item_ethillu_1_wgslime_1_wgthorns_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "echoing_remedy": [
                                     "回响秘剂",
@@ -1276,7 +1985,7 @@
                     "label": "$option.CreditShoppingItems.cases.RindFlavoredSprouts.label",
                     "icon": "resource/image/UI/Item/item_jzmonk_1_hsmob_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "rind_flavored_sprouts": [
                                     "陈皮拌笋",
@@ -1294,7 +2003,7 @@
                     "label": "$option.CreditShoppingItems.cases.StoneholdRemedy.label",
                     "icon": "resource/image/UI/Item/item_klcreatures_1_wgthorns_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "stonehold_remedy": [
                                     "蓄石秘剂",
@@ -1312,7 +2021,7 @@
                     "label": "$option.CreditShoppingItems.cases.RuinPurgerRemedy.label",
                     "icon": "resource/image/UI/Item/item_klbuds_1_hsfly_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "ruin_purger_remedy": [
                                     "洗灾秘剂",
@@ -1330,7 +2039,7 @@
                     "label": "$option.CreditShoppingItems.cases.SearToastedLiver.label",
                     "icon": "resource/image/UI/Item/item_slwood_1_hshog_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "sear_toasted_liver": [
                                     "香焗兽肝",
@@ -1348,7 +2057,7 @@
                     "label": "$task.AutoStockStaple.item.item_inkbiter_1_wgshoal_1_1",
                     "icon": "resource/image/UI/Item/item_inkbiter_1_wgshoal_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "item_inkbiter_1_wgshoal_1_1": [
                                     "草本清凉饮",
@@ -1366,7 +2075,7 @@
                     "label": "$task.AutoStockStaple.item.item_inkkirin_1_hscrane_1_1",
                     "icon": "resource/image/UI/Item/item_inkkirin_1_hscrane_1_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameDaily": {
                             "attach": {
                                 "item_inkkirin_1_hscrane_1_1": [
                                     "酥麻炸虫蛹",
@@ -1390,7 +2099,7 @@
                     "name": "WulingEngravingPermitLimit",
                     "label": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsWulingEngravingPermitLimit.inputs.WulingEngravingPermitLimit.label",
                     "description": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsWulingEngravingPermitLimit.inputs.WulingEngravingPermitLimit.description",
-                    "default": "20",
+                    "default": "200",
                     "pipeline_type": "int",
                     "verify": "^(?:0|[1-9]\\d{0,3})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsWulingEngravingPermitLimit.inputs.WulingEngravingPermitLimit.pattern_msg"
@@ -1417,6 +2126,233 @@
                 }
             }
         },
+        "AutoStockMinDiscountWulingEngravingPermit": {
+            "type": "select",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountWulingEngravingPermit.label",
+            "cases": [
+                {
+                    "name": "Any",
+                    "label": "$option.DiscountValue.cases.Any.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "type": "ColorMatch",
+                                "param": {
+                                    "roi": "AutoStockInStapleItemNameEngravingPermit",
+                                    "roi_offset": [
+                                        37,
+                                        -190,
+                                        10,
+                                        28
+                                    ],
+                                    "lower": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "upper": [
+                                        255,
+                                        255,
+                                        255
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-95%",
+                    "label": "$option.DiscountValue.cases.-95%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-90%",
+                    "label": "$option.DiscountValue.cases.-90%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-85%",
+                    "label": "$option.DiscountValue.cases.-85%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-80%",
+                    "label": "$option.DiscountValue.cases.-80%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-75%",
+                    "label": "$option.DiscountValue.cases.-75%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-70%",
+                    "label": "$option.DiscountValue.cases.-70%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-65%",
+                    "label": "$option.DiscountValue.cases.-65%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-50%",
+                    "label": "$option.DiscountValue.cases.-50%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingEngravingPermit": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60",
+                                        "-55",
+                                        "-50"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "-95%"
+        },
         "AutoStockBuyDailyGoodsWulingFoodAndBuffLimit": {
             "type": "input",
             "label": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsWulingFoodAndBuffLimit.label",
@@ -1428,7 +2364,7 @@
                     "description": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsWulingFoodAndBuffLimit.inputs.WulingFoodAndBuffLimit.description",
                     "default": "20",
                     "pipeline_type": "int",
-                    "verify": "^(?:0|[1-9]\\d{0,3})$",
+                    "verify": "^(?:0|[1-9]\\d{0,5})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyDailyGoodsWulingFoodAndBuffLimit.inputs.WulingFoodAndBuffLimit.pattern_msg"
                 }
             ],
@@ -1615,6 +2551,233 @@
                 }
             }
         },
+        "AutoStockMinDiscountWulingDaily": {
+            "type": "select",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountWulingDaily.label",
+            "cases": [
+                {
+                    "name": "Any",
+                    "label": "$option.DiscountValue.cases.Any.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "type": "ColorMatch",
+                                "param": {
+                                    "roi": "AutoStockInStapleItemNameDaily",
+                                    "roi_offset": [
+                                        37,
+                                        -190,
+                                        10,
+                                        28
+                                    ],
+                                    "lower": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "upper": [
+                                        255,
+                                        255,
+                                        255
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-95%",
+                    "label": "$option.DiscountValue.cases.-95%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-90%",
+                    "label": "$option.DiscountValue.cases.-90%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-85%",
+                    "label": "$option.DiscountValue.cases.-85%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-80%",
+                    "label": "$option.DiscountValue.cases.-80%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-75%",
+                    "label": "$option.DiscountValue.cases.-75%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-70%",
+                    "label": "$option.DiscountValue.cases.-70%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-65%",
+                    "label": "$option.DiscountValue.cases.-65%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-50%",
+                    "label": "$option.DiscountValue.cases.-50%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingDaily": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60",
+                                        "-55",
+                                        "-50"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "-50%"
+        },
         "AutoStockBuyStockFactoryGoodsWuling": {
             "type": "switch",
             "label": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWuling.label",
@@ -1625,7 +2788,9 @@
                     "option": [
                         "AutoStockBuyStockFactoryGoodsWulingItems",
                         "AutoStockBuyStockFactoryGoodsWulingArtificingCatalystLimit",
-                        "AutoStockBuyStockFactoryGoodsWulingDetectorCompassLimit"
+                        "AutoStockMinDiscountWulingArtificingCatalyst",
+                        "AutoStockBuyStockFactoryGoodsWulingDetectorCompassLimit",
+                        "AutoStockMinDiscountWulingIndustrial"
                     ]
                 },
                 {
@@ -1644,7 +2809,7 @@
                     "label": "$option.CreditShoppingItems.cases.WulingArtificingCatalyst.label",
                     "icon": "resource/image/UI/Item/item_equip_enhance_wuling.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameArtificingCatalyst": {
                             "attach": {
                                 "wuling_artificing_catalyst": [
                                     "武陵精锻助剂",
@@ -1662,7 +2827,7 @@
                     "label": "$option.CreditShoppingItems.cases.KeenWulingDetector.label",
                     "icon": "resource/image/UI/Item/item_wuling_detector_trchest_3.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameIndustrial": {
                             "attach": {
                                 "keen_wuling_detector": [
                                     "新锐武陵探物器",
@@ -1680,7 +2845,7 @@
                     "label": "$option.CreditShoppingItems.cases.KeenWulingCompass.label",
                     "icon": "resource/image/UI/Item/item_wuling_detector_coin_3.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameIndustrial": {
                             "attach": {
                                 "keen_wuling_compass": [
                                     "新锐武陵罗盘",
@@ -1698,7 +2863,7 @@
                     "label": "$option.CreditShoppingItems.cases.WulingTalositeProbe.label",
                     "icon": "resource/image/UI/Item/item_wuling_detector_star.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameIndustrial": {
                             "attach": {
                                 "wuling_talosite_probe": [
                                     "武陵塔晶探针",
@@ -1727,7 +2892,7 @@
                     "name": "WulingArtificingCatalystLimit",
                     "label": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWulingArtificingCatalystLimit.inputs.WulingArtificingCatalystLimit.label",
                     "description": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWulingArtificingCatalystLimit.inputs.WulingArtificingCatalystLimit.description",
-                    "default": "20",
+                    "default": "1000",
                     "pipeline_type": "int",
                     "verify": "^(?:0|[1-9]\\d{0,3})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWulingArtificingCatalystLimit.inputs.WulingArtificingCatalystLimit.pattern_msg"
@@ -1754,6 +2919,233 @@
                 }
             }
         },
+        "AutoStockMinDiscountWulingArtificingCatalyst": {
+            "type": "select",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountWulingArtificingCatalyst.label",
+            "cases": [
+                {
+                    "name": "Any",
+                    "label": "$option.DiscountValue.cases.Any.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "type": "ColorMatch",
+                                "param": {
+                                    "roi": "AutoStockInStapleItemNameArtificingCatalyst",
+                                    "roi_offset": [
+                                        37,
+                                        -190,
+                                        10,
+                                        28
+                                    ],
+                                    "lower": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "upper": [
+                                        255,
+                                        255,
+                                        255
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-95%",
+                    "label": "$option.DiscountValue.cases.-95%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-90%",
+                    "label": "$option.DiscountValue.cases.-90%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-85%",
+                    "label": "$option.DiscountValue.cases.-85%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-80%",
+                    "label": "$option.DiscountValue.cases.-80%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-75%",
+                    "label": "$option.DiscountValue.cases.-75%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-70%",
+                    "label": "$option.DiscountValue.cases.-70%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-65%",
+                    "label": "$option.DiscountValue.cases.-65%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-50%",
+                    "label": "$option.DiscountValue.cases.-50%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingArtificingCatalyst": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60",
+                                        "-55",
+                                        "-50"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "-90%"
+        },
         "AutoStockBuyStockFactoryGoodsWulingDetectorCompassLimit": {
             "type": "input",
             "label": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWulingDetectorCompassLimit.label",
@@ -1763,7 +3155,7 @@
                     "name": "WulingDetectorCompassLimit",
                     "label": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWulingDetectorCompassLimit.inputs.WulingDetectorCompassLimit.label",
                     "description": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWulingDetectorCompassLimit.inputs.WulingDetectorCompassLimit.description",
-                    "default": "20",
+                    "default": "50",
                     "pipeline_type": "int",
                     "verify": "^(?:0|[1-9]\\d{0,3})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyStockFactoryGoodsWulingDetectorCompassLimit.inputs.WulingDetectorCompassLimit.pattern_msg"
@@ -1826,6 +3218,233 @@
                 }
             }
         },
+        "AutoStockMinDiscountWulingIndustrial": {
+            "type": "select",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountWulingIndustrial.label",
+            "cases": [
+                {
+                    "name": "Any",
+                    "label": "$option.DiscountValue.cases.Any.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "type": "ColorMatch",
+                                "param": {
+                                    "roi": "AutoStockInStapleItemNameIndustrial",
+                                    "roi_offset": [
+                                        37,
+                                        -190,
+                                        10,
+                                        28
+                                    ],
+                                    "lower": [
+                                        0,
+                                        0,
+                                        0
+                                    ],
+                                    "upper": [
+                                        255,
+                                        255,
+                                        255
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-95%",
+                    "label": "$option.DiscountValue.cases.-95%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-90%",
+                    "label": "$option.DiscountValue.cases.-90%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-85%",
+                    "label": "$option.DiscountValue.cases.-85%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-80%",
+                    "label": "$option.DiscountValue.cases.-80%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-75%",
+                    "label": "$option.DiscountValue.cases.-75%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-70%",
+                    "label": "$option.DiscountValue.cases.-70%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-65%",
+                    "label": "$option.DiscountValue.cases.-65%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "-50%",
+                    "label": "$option.DiscountValue.cases.-50%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingIndustrial": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60",
+                                        "-55",
+                                        "-50"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "default_case": "-75%"
+        },
         "AutoStockBuyCulturalGoodsWuling": {
             "type": "switch",
             "label": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsWuling.label",
@@ -1835,7 +3454,8 @@
                     "name": "Yes",
                     "option": [
                         "AutoStockBuyCulturalGoodsWulingItems",
-                        "AutoStockBuyCulturalGoodsWulingGiftLimit"
+                        "AutoStockBuyCulturalGoodsWulingGiftLimit",
+                        "AutoStockMinDiscountWulingCultural"
                     ]
                 },
                 {
@@ -1854,7 +3474,7 @@
                     "label": "$option.CreditShoppingItems.cases.EurekaTeabox.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_1.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "eureka_teabox": [
                                     "岳研茶盒",
@@ -1872,7 +3492,7 @@
                     "label": "$option.CreditShoppingItems.cases.YinglungDumbbells.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_2.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "yinglung_dumbbells": [
                                     "应龙哑铃",
@@ -1890,7 +3510,7 @@
                     "label": "$option.CreditShoppingItems.cases.WovenAggelos.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_3.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "woven_aggelos": [
                                     "草编天使",
@@ -1908,7 +3528,7 @@
                     "label": "$option.CreditShoppingItems.cases.ScrimshawOfThePack.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_4.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "scrimshaw_of_the_pack": [
                                     "狼群骨雕",
@@ -1926,7 +3546,7 @@
                     "label": "$option.CreditShoppingItems.cases.FinNChips.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_6.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "fin_n_chips": [
                                     "炸鳞薯条",
@@ -1944,7 +3564,7 @@
                     "label": "$option.CreditShoppingItems.cases.BizarroCupcake.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_7.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "bizarro_cupcake": [
                                     "怪味纸杯蛋糕",
@@ -1962,7 +3582,7 @@
                     "label": "$option.CreditShoppingItems.cases.ChubbyLungFangxingMemorabilia.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_5.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "chubby_lung_fangxing_memorabilia": [
                                     "方兴纪念",
@@ -1982,7 +3602,7 @@
                     "label": "$option.CreditShoppingItems.cases.FowlbeastPaperKite.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_8.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "fowlbeast_paper_kite": [
                                     "羽兽剪纸风筝",
@@ -2000,7 +3620,7 @@
                     "label": "$option.CreditShoppingItems.cases.SwingingGentlemanClassicalAlbum.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_9.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "swinging_gentleman_classical_album": [
                                     "《摇摆绅士古典特辑》",
@@ -2024,7 +3644,7 @@
                     "label": "$option.CreditShoppingItems.cases.MyrkwoodBerryPreserve.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_10.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "myrkwood_berry_preserve": [
                                     "黑森林浆果酱",
@@ -2042,7 +3662,7 @@
                     "label": "$option.CreditShoppingItems.cases.MiracleCake.label",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_11.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "miracle_cake": [
                                     "奇迹蛋糕",
@@ -2060,7 +3680,7 @@
                     "label": "$task.AutoStockStaple.item.item_gift_jinlong_12",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_12.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "item_gift_jinlong_12": [
                                     "缘缘庄拼图",
@@ -2078,7 +3698,7 @@
                     "label": "$task.AutoStockStaple.item.item_gift_jinlong_13",
                     "icon": "resource/image/UI/Item/item_gift_jinlong_13.png",
                     "pipeline_override": {
-                        "AutoStockInStapleItemName": {
+                        "AutoStockInStapleItemNameCultural": {
                             "attach": {
                                 "item_gift_jinlong_13": [
                                     "木雕剑",
@@ -2102,7 +3722,7 @@
                     "name": "WulingGiftLimit",
                     "label": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsWulingGiftLimit.inputs.WulingGiftLimit.label",
                     "description": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsWulingGiftLimit.inputs.WulingGiftLimit.description",
-                    "default": "20",
+                    "default": "50",
                     "pipeline_type": "int",
                     "verify": "^(?:0|[1-9]\\d{0,3})$",
                     "pattern_msg": "$task.AutoStockStaple.option.AutoStockBuyCulturalGoodsWulingGiftLimit.inputs.WulingGiftLimit.pattern_msg"
@@ -2345,26 +3965,25 @@
                 }
             }
         },
-        "AutoStockMinDiscountWuling": {
+        "AutoStockMinDiscountWulingCultural": {
             "type": "select",
-            "label": "$option.DiscountValue.label",
+            "label": "$task.AutoStockStaple.option.AutoStockMinDiscountWulingCultural.label",
             "cases": [
                 {
                     "name": "Any",
                     "label": "$option.DiscountValue.cases.Any.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "type": "ColorMatch",
                                 "param": {
-                                    "roi": "AutoStockInStapleItemName",
+                                    "roi": "AutoStockInStapleItemNameCultural",
                                     "roi_offset": [
                                         37,
                                         -190,
                                         10,
                                         28
                                     ],
-                                    "method": 40,
                                     "lower": [
                                         0,
                                         0,
@@ -2374,8 +3993,7 @@
                                         255,
                                         255,
                                         255
-                                    ],
-                                    "order_by": "Vertical"
+                                    ]
                                 }
                             }
                         }
@@ -2385,7 +4003,7 @@
                     "name": "-95%",
                     "label": "$option.DiscountValue.cases.-95%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2402,7 +4020,7 @@
                     "name": "-90%",
                     "label": "$option.DiscountValue.cases.-90%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2420,7 +4038,7 @@
                     "name": "-85%",
                     "label": "$option.DiscountValue.cases.-85%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2439,7 +4057,7 @@
                     "name": "-80%",
                     "label": "$option.DiscountValue.cases.-80%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2459,7 +4077,7 @@
                     "name": "-75%",
                     "label": "$option.DiscountValue.cases.-75%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2480,7 +4098,7 @@
                     "name": "-70%",
                     "label": "$option.DiscountValue.cases.-70%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2502,7 +4120,7 @@
                     "name": "-65%",
                     "label": "$option.DiscountValue.cases.-65%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2522,10 +4140,34 @@
                     }
                 },
                 {
+                    "name": "-60%",
+                    "label": "$option.DiscountValue.cases.-60%.label",
+                    "pipeline_override": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
+                            "recognition": {
+                                "param": {
+                                    "expected": [
+                                        "-99",
+                                        "-95",
+                                        "-90",
+                                        "-85",
+                                        "-80",
+                                        "-75",
+                                        "-70",
+                                        "-65",
+                                        "-60"
+                                    ],
+                                    "order_by": "Expected"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
                     "name": "-50%",
                     "label": "$option.DiscountValue.cases.-50%.label",
                     "pipeline_override": {
-                        "AutoStockInStapleItemDiscountsWuling": {
+                        "AutoStockInStapleItemDiscountsWulingCultural": {
                             "recognition": {
                                 "param": {
                                     "expected": [
@@ -2548,7 +4190,7 @@
                     }
                 }
             ],
-            "default_case": "-50%"
+            "default_case": "-95%"
         }
     }
 }
