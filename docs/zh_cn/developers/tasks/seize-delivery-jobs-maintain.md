@@ -362,7 +362,7 @@ Go 从 `__SeizeDeliveryJobsMinReward.expected[0]` 读取任务输入，并把奖
 
 ## ADB / CloudADB / PlayCover 适配维护
 
-ADB 与 PlayCover 都加载 `resource_adb`（PlayCover 的触屏覆盖已并入其中）；CloudADB 在此基础上再加载 `resource_cloud`（云终末地的基础识别差异）。控制器白名单在 `task-template.jsonc` 中维护，改后需重新生成，不要只改 `assets/tasks/SeizeDeliveryJobs.json`。
+ADB 与 PlayCover 都加载 `resource_adb`（PlayCover 的触屏覆盖已并入其中）；CloudADB 在此基础上再加载 `resource_cloud_common`（进游戏后的颜色 / 模板 / ROI 差异）与 `resource_cloud`（adb 客户端独有的登录界面覆盖），分层规则见 [cloud-resource-layers.md](../cloud-resource-layers.md)。控制器白名单在 `task-template.jsonc` 中维护，改后需重新生成，不要只改 `assets/tasks/SeizeDeliveryJobs.json`。
 
 ### 模板与行内偏移
 

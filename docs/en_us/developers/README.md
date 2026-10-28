@@ -124,6 +124,7 @@ Define the format specifications for files written by MaaEnd, for reliable readi
 | I'm a complete beginner, I don't understand the terminology | [super-basic-introduction.md](./super-basic-introduction.md) |
 | Participate for the first time, starting from scratch | [getting-started.md](./getting-started.md) |
 | Understand the project architecture | [components-guide.md](./components-guide.md) |
+| How Cloud Endfield resource layers are split (common / platform) | [cloud-resource-layers.md](./cloud-resource-layers.md) |
 | Modify Pipeline nodes | [components-guide.md](./components-guide.md) → [common-buttons.md](./common-buttons.md) / [in-scene.md](./in-scene.md) / [scene-manager.md](./scene-manager.md) |
 | Write or debug Go Service | [components-guide.md](./components-guide.md) → [custom.md](./custom.md) → [go-service-pkg.md](./go-service-pkg.md) |
 | Consult coding standards | [coding-standards.md](./coding-standards.md) |
