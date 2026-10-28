@@ -124,6 +124,7 @@ flowchart TD
 | 完全零基础，术语都看不懂 | [super-basic-introduction.md](./super-basic-introduction.md) |
 | 第一次参与，从零开始 | [getting-started.md](./getting-started.md) |
 | 了解项目架构 | [components-guide.md](./components-guide.md) |
+| 云终末地的资源层怎么分工（common / 平台层） | [cloud-resource-layers.md](./cloud-resource-layers.md) |
 | 改 Pipeline 节点 | [components-guide.md](./components-guide.md) → [common-buttons.md](./common-buttons.md) / [in-scene.md](./in-scene.md) / [scene-manager.md](./scene-manager.md) |
 | 写或调 Go Service | [components-guide.md](./components-guide.md) → [custom.md](./custom.md) → [go-service-pkg.md](./go-service-pkg.md) |
 | 查阅编码规范 | [coding-standards.md](./coding-standards.md) |

@@ -43,6 +43,7 @@
             "description": "$controller.CloudWeb.description",
             "type": "Win32",
             "attach_resource_path": [
+                "./resource_cloud_common",
                 "./resource_cloud_web"
             ],
             "win32": {
@@ -69,6 +70,7 @@
             "type": "Adb",
             "attach_resource_path": [
                 "./resource_adb",
+                "./resource_cloud_common",
                 "./resource_cloud"
             ]
         },

@@ -362,7 +362,7 @@ If a new branch leaves the job list or refreshes job data, connect it to an expl
 
 ## ADB / CloudADB / PlayCover Adaptation
 
-ADB and PlayCover both load `resource_adb` (PlayCover's touch overrides now live there); CloudADB additionally loads `resource_cloud`, the base recognition set for cloud builds. The controller allowlist lives in `task-template.jsonc`; regenerate after changing it instead of editing only `assets/tasks/SeizeDeliveryJobs.json`.
+ADB and PlayCover both load `resource_adb` (PlayCover's touch overrides now live there); on top of that, CloudADB loads `resource_cloud_common` (in-game colour / template / ROI differences) and `resource_cloud` (login-screen overrides specific to the adb client). See [cloud-resource-layers.md](../cloud-resource-layers.md) for the layering rules. The controller allowlist lives in `task-template.jsonc`; regenerate after changing it instead of editing only `assets/tasks/SeizeDeliveryJobs.json`.
 
 ### Templates and Row Offsets
 
