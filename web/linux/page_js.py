@@ -361,7 +361,8 @@ PROBE_JS = r"""
         const r = e.getBoundingClientRect();
         return {x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height)};
     };
-    const out = {version: VERSION, url: location.href, size: [innerWidth, innerHeight], ball: [], ping: [], geo: []};
+    const out = {version: VERSION, url: location.href, size: [innerWidth, innerHeight],
+        counter: window.__maaFlatten || null, ball: [], ping: [], geo: []};
 
     for (const sel of ['[class*="hbU_7F"]', '[class*="e4MbkW"]']) {
         for (const e of document.querySelectorAll(sel)) {

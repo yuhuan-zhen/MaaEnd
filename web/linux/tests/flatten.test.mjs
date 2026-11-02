@@ -252,6 +252,7 @@ test("PROBE_JS：注入后探测报「已被抹平隐藏」与标记类型", () 
     assert.equal(out.ping[0].hiddenByFlatten, true);
     assert.equal(out.ping[0].shown, false, "已经被抹平藏掉的要报 shown=false");
     assert.equal(out.ping[0].lifted, -1, "已被标记时不再计算 lift 层数");
+    assert.equal(out.counter.version, "linux-2");
     assert.ok(Array.isArray(out.geo));
 });
 
@@ -265,4 +266,5 @@ test("PROBE_JS：未注入时能报出 lift 层数与「还可见」", () => {
     assert.equal(out.ping[0].marker, "");
     assert.equal(out.ping[0].hiddenByFlatten, false);
     assert.equal(out.ping[0].shown, true);
+    assert.equal(out.counter, null, "未注入时没有计数对象");
 });
