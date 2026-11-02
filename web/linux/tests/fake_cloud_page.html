@@ -15,6 +15,15 @@
   <div id="ball" class="hbU_7F x" style="position:fixed;left:20px;top:20px;width:56px;height:56px;
        border-radius:50%;background:#fff;z-index:9"></div>
   <div id="lat" style="position:fixed;right:12px;bottom:8px;color:#fff;font-size:14px;z-index:9">23 ms</div>
+  <!-- 2026-10-29 在 homesrv 云网页端实测的延迟指示器结构：容器 40x38 + 三条信号条 + span "9ms"
+       （真实 class 是 _gEApb / K_iy0u，这里故意不带哈希，用来验证「前端改版换 class 后靠文本 lift 仍能藏掉」） -->
+  <div id="ping" style="position:fixed;right:12px;bottom:44px;width:40px;height:38px;z-index:9;
+       display:flex;align-items:flex-end;gap:3px;padding:4px">
+    <i style="width:3px;height:6px;background:#fff"></i>
+    <i style="width:3px;height:9px;background:#fff"></i>
+    <i style="width:3px;height:12px;background:#fff"></i>
+    <span id="pingText" style="position:absolute;left:8px;bottom:2px;color:#fff;font-size:11px">9ms</span>
+  </div>
   <div id="game">
     <video id="WelinkGameVideo" autoplay muted playsinline></video>
     <div id="gamePlayLayer"></div>
