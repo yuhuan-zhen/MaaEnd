@@ -74,9 +74,20 @@ def summarize(probe: dict[str, Any]) -> dict[str, Any]:
         "ball": len(probe.get("ball") or []),
         "ping": len(pings),
         "geo": len(probe.get("geo") or []),
-        "hidden": sum(1 for p in pings if p.get("hiddenByFlatten")),
+        "hidden": sum(1 for p in pings if not p.get("shown", True)),
         "counter": probe.get("counter"),
     }
+
+
+def needs_reinject(probe: dict[str, Any]) -> bool:
+    """注入是否已经失效：文档被替换后 ``window.__maaFlatten`` 会消失。
+
+    2026-11-02 实测：Chrome 的 ``Page.addScriptToEvaluateOnNewDocument`` 绑在 CDP session 上，
+    session 一关（旧版 watch 每轮开/关连接）新文档就不再注入，页面上出现浮层但 counter 为 null。
+    """
+    if not probe.get("counter"):
+        return True
+    return any(p.get("shown") for p in (probe.get("ping") or []))
 
 
 def all_hidden(probe: dict[str, Any]) -> bool:
@@ -170,44 +181,63 @@ def run_once(devtools: str, url_hint: str) -> int:
 
 
 def run_watch(devtools: str, url_hint: str, interval: float, probe_every: float) -> int:
-    """常驻：新 target 立刻注入；已注入的每 probe_every 秒探一次，打一行日志。
+    """常驻：每个 target 保持**一条长连接**，新 target 立刻注入并探测。
 
-    只按 target id 去重 —— 页面自身刷新（F5 / 重登录）会带同一个 id 但换文档，
-    ``Page.addScriptToEvaluateOnNewDocument`` 仍然生效，不需要重复注入。
+    为什么必须长连接：``Page.addScriptToEvaluateOnNewDocument`` 绑在 CDP session 上，
+    session 一关就失效（2026-11-02 在真实会话上实测：``counter`` 从 linux-2 变回 null，
+    页面上仍然有 9ms 角标）。短连接版本只能注入当前文档，文档一换就等于没注入。
     """
+    sessions: dict[str, Sess] = {}
     last_probe: dict[str, float] = {}
-    while True:
-        try:
-            pages = list_pages(devtools)
-        except Exception as exc:
-            _log(f"devtools unreachable: {exc}")
-            time.sleep(interval)
-            continue
-        alive = set()
-        for target in select_targets(pages, url_hint):
-            tid = _tag(target)
-            alive.add(tid)
-            now = time.time()
-            needs_probe = now - last_probe.get(tid, 0.0) >= probe_every
-            if tid in last_probe and not needs_probe:
-                continue
+    try:
+        while True:
             try:
-                sess = Sess(target["webSocketDebuggerUrl"])
-                try:
-                    if tid not in last_probe:
-                        inject(sess)
-                    probe = sess.probe()
-                finally:
-                    sess.close()
+                pages = list_pages(devtools)
             except Exception as exc:
-                _log(f"{tid} error: {exc}")
+                _log(f"devtools unreachable: {exc}")
+                for tid in list(sessions):
+                    sessions.pop(tid).close()
+                last_probe.clear()
+                time.sleep(interval)
                 continue
-            last_probe[tid] = now
-            summary = summarize(probe)
-            _log(f"{tid} overlay={json.dumps(summary, ensure_ascii=False)}")
-        for gone in set(last_probe) - alive:
-            last_probe.pop(gone, None)
-        time.sleep(interval)
+
+            alive = {_tag(t): t for t in select_targets(pages, url_hint)}
+            for tid in list(sessions):
+                if tid not in alive:
+                    sessions.pop(tid).close()
+                    last_probe.pop(tid, None)
+
+            for tid, target in alive.items():
+                sess = sessions.get(tid)
+                if sess is None:
+                    try:
+                        sess = Sess(target["webSocketDebuggerUrl"])
+                    except Exception as exc:
+                        _log(f"{tid} connect failed: {exc}")
+                        continue
+                    sessions[tid] = sess
+
+                now = time.time()
+                if tid in last_probe and now - last_probe[tid] < probe_every:
+                    continue
+                try:
+                    probe = sess.probe()
+                    if needs_reinject(probe):
+                        inject(sess)
+                        probe = sess.probe()
+                except Exception as exc:
+                    _log(f"{tid} error: {exc}")
+                    sessions.pop(tid).close()
+                    last_probe.pop(tid, None)
+                    continue
+                last_probe[tid] = now
+                _log(f"{tid} overlay={json.dumps(summarize(probe), ensure_ascii=False)}")
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        for sess in sessions.values():
+            sess.close()
 
 
 def main(argv: list[str] | None = None) -> int:

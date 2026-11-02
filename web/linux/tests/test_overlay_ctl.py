@@ -72,11 +72,32 @@ class SummarizeTest(unittest.TestCase):
         self.assertEqual(s["version"], "linux-2")
         self.assertEqual(s["counter"]["ping"], 2)
 
+    def test_hidden_counts_css_hidden_too(self):
+        """CSS 先藏掉时 JS 不会打 marker，hidden 必须按「当前不可见」计。"""
+        probe = {"ping": [{"text": "7ms", "hiddenByFlatten": False, "shown": False, "lifted": 0}],
+                 "ball": [], "geo": [], "counter": {"ping": 0}}
+        self.assertEqual(overlay_ctl.summarize(probe)["hidden"], 1)
+
     def test_all_hidden(self):
         self.assertFalse(overlay_ctl.all_hidden(self.probe()))
         hidden = {"ping": [{"hiddenByFlatten": True, "shown": False}]}
         self.assertTrue(overlay_ctl.all_hidden(hidden))
         self.assertTrue(overlay_ctl.all_hidden({"ping": []}), "没有浮层也算已处理")
+
+
+class NeedsReinjectTest(unittest.TestCase):
+    def test_missing_counter_means_reinject(self):
+        # 2026-11-02 真实会话复现：文档被替换后 counter 消失，浮层还可见
+        self.assertTrue(overlay_ctl.needs_reinject({"counter": None, "ping": [{"shown": True}]}))
+
+    def test_visible_ping_means_reinject(self):
+        self.assertTrue(overlay_ctl.needs_reinject(
+            {"counter": {"version": "linux-2"}, "ping": [{"shown": True}]}))
+
+    def test_injected_and_hidden_is_stable(self):
+        self.assertFalse(overlay_ctl.needs_reinject(
+            {"counter": {"version": "linux-2"}, "ping": [{"shown": False}]}))
+        self.assertFalse(overlay_ctl.needs_reinject({"counter": {"version": "linux-2"}, "ping": []}))
 
 
 class SessProbeShapeTest(unittest.TestCase):
