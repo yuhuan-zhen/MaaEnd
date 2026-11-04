@@ -6,11 +6,16 @@
 
 除了 ``main``，这里还保留旧模块级的常量与函数名：``homesrv/map_probe.py``
 仍在 ``from run_daily_linux import DIRS, SOCK, log, start_agent``，
-``calibrate_turn.py`` 仍在 ``R.make_controller(SOCK)`` / ``R.start_agents(res, ...)``。
+``devtools/calibrate_turn.py`` 仍在 ``R.make_controller(SOCK)`` / ``R.start_agents(res, ...)``。
 这些名字是兼容契约，不要删。
-"""
 
-from __future__ import annotations
+用法::
+
+    python3 run_daily_linux.py --instance <预设 id> --dry-run
+    python3 run_daily_linux.py --tasks WebStartGame --attempts 1
+
+退出码：见 :mod:`maaend_web.cli.daily`（0 全成功 / 3 资源 / 4 控制器 / 7 有任务失败）。
+"""
 
 import json
 import os

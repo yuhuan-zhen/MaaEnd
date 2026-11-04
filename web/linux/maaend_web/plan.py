@@ -1,9 +1,14 @@
 """按 ``--tasks`` / ``--only`` / ``--from-to`` 从计划里挑出本次要跑的任务。
 
-三条选择语义与重构前的 ``run_daily_linux.py`` 逐字一致：先过滤掉没有 entry 或被预设禁用的项，再按 1 基序号定位。
-"""
+三条选择语义与重构前逐字一致：先过滤掉没有 entry 或被预设禁用的项，再按 1 基序号定位。
+提示文案（``序号越界: X`` / ``未知任务: X``）由 :func:`select_plan_with_notes` 原样返回，
+CLI 加前缀打印，``--dry-run`` 的输出因此可与重构前逐字对比。
 
-from __future__ import annotations
+用法::
+
+    chosen = select_plan(plan, tasks="1-3,WebStartGame")
+    chosen, notes = select_plan_with_notes(plan, only="1,2")
+"""
 
 from collections.abc import Sequence
 

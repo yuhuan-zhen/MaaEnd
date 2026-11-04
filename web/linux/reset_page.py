@@ -1,19 +1,21 @@
 """把云游戏页面重置回启动页（强制，绕开 beforeunload）。
 
-背景：
-    云游戏页面注册了 beforeunload，`Page.navigate` / 关标签都会触发 Chrome 原生
-    「Leave site? / 离开此网站？」确认框。那是**浏览器 UI**，不是网页 DOM：
-    - 用 OCR/TemplateMatch 识别不到，游戏内所有识别随之失效；
-    - `Page.handleJavaScriptDialog` 对它无效（实测点了仍在）。
+背景：云游戏页面注册了 beforeunload，``Page.navigate`` / 关标签都会触发 Chrome 原生
+「Leave site? / 离开此网站？」确认框。那是**浏览器 UI**，不是网页 DOM：OCR/TemplateMatch
+识别不到，``Page.handleJavaScriptDialog`` 也无效（实测点了仍在），游戏内所有识别随之失效。
 
-做法：
-    用 CDP 的 HTTP 端点 /json/new 先开一个新标签到目标 URL，再用 /json/close 关掉旧标签。
-    两条都是强制操作，不经过渲染进程的 beforeunload，所以不会弹框。
+做法：用 CDP 的 HTTP 端点 ``/json/new`` 先开一个新标签到目标 URL，再用 ``/json/close``
+关掉旧标签。两条都是强制操作，不经过渲染进程的 beforeunload，所以不会弹框。
 
-用法: python3 reset_page.py [--port 9334] [--url https://...] [--wait 12]
+为什么留在顶层：``maaend_web.recovery.Recoverer.hard_reset()`` 按路径用当前解释器拉起它，
+``homesrv/lib.sh`` 也直接调；只用标准库，不 import 本包任何模块。
+
+用法::
+
+    python3 reset_page.py [--port 9334] [--url https://...] [--wait 12]
+
+退出码：0 = 已重置（复查失败也算 0）；2 = CDP 不可达；3 = 新建标签失败。
 """
-
-from __future__ import annotations
 
 import argparse
 import json

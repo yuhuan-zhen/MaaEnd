@@ -1,4 +1,4 @@
-"""把 MXU 预设实例（config/mxu-MaaEnd.json）解析成「任务 -> entry + pipeline_override」。
+"""把 MXU 预设实例（``config/mxu-MaaEnd.json``）解析成「任务 -> entry + pipeline_override」。
 
 MXU 在 GUI 里做的事就是：读任务的 optionValues -> 按 option.cases 的 pipeline_override
 合并成一个覆盖字典 -> 提交任务时传给框架。Linux 上没有 GUI，只能自己复现。
@@ -9,24 +9,31 @@ MXU 在 GUI 里做的事就是：读任务的 optionValues -> 按 option.cases �
   select   : {"type":"select","caseName":str}    -> 单个 case
   input    : {"type":"input","values":{name:v}}  -> option 根上的 pipeline_override，{InputName} 占位
 
+三条硬约束（每条都对应过一次线上故障）：
+
+1. **选项树必须递归到底**。上游把 AutoStockStaple 的购买清单下沉到第三层（``*Items``），
+   只展开两层会静默丢掉 28 条 attach，任务照常返回成功但一件不买。
+2. **input / hotkey 型的 pipeline_override 在 option 根上**，不能只看 case：
+   库存阈值/价格/最大次数都在这里，漏了就全用默认值。
+3. **整串占位符要按 pipeline_type 转类型**。写成字符串 ``"4600"`` 会让 go-service 的
+   int 字段反序列化失败并 return false，把原本正常的任务跑挂。
+
 占位符替换规则（上游 interface.schema.json 的 inputItem.pipeline_type）：
   * 整串占位符（值就是 "{Name}"）——按 pipeline_type 转成 int/bool，保持 JSON 类型；
   * 嵌入字符串（"{Name}>{Other}"）——只替换文本，保持字符串。
 取值顺序：optionValues.values[name] -> inputs[].default -> 缺失则整条 po 不合并
 （宁可让静态 pipeline 的默认值生效，也不要写入一个解析不了的占位符）。
 
-2026-10-20 修复记录：
-  1. 原实现只展开两层，case.option 的子选项只登记不处理；上游把 AutoStockStaple 的
-     购买清单下沉到第三层（*Items）后，28 条 attach 被静默丢弃 -> 进商店滑完列表一件不买。
-  2. 原实现完全忽略 input 型（po 在 option 根上），库存阈值/价格/最大次数一律没传。
-  3. 类型转换：input 的整串占位符此前会被写成字符串（"4600"），go-service 的 int 字段
-     反序列化失败即 return false —— 会把原本正常的任务跑挂。
+用法::
 
-模块级 ``ROOT`` / ``CONFIG`` 只是兼容旧调用点（``homesrv/option_audit.py`` 读 ``rp.ROOT``、
-``rp.CONFIG``）的默认值，取自 ``config.load_settings()``；新代码请显式传 ``root`` / ``config_path``。
+    inst, plan = load_preset("my-instance")          # 不给 --instance 时取预设里的第一个
+    for item in plan:
+        print(item.name, item.entry, item.n_override)
+
+模块级 ``ROOT`` / ``CONFIG`` 只是兼容旧调用点（``homesrv/option_audit.py`` 读
+``rp.ROOT`` / ``rp.CONFIG``）的默认值，取自 ``config.load_settings()``；
+新代码请显式传 ``root`` / ``config_path``。
 """
-
-from __future__ import annotations
 
 import glob
 import json
@@ -333,7 +340,8 @@ def load_preset(
 ) -> tuple[dict, list[PlanItem]]:
     """读预设实例并解析成计划，返回 (实例字典, 计划项列表)。
 
-    找不到实例时抛 ``LookupError``（由 CLI 转成人话）；单个任务解析失败只落到该项的 ``notes``，不影响整份计划。
+    ``instance`` 传空串时取配置文件里的第一个实例（CLI 不写 ``--instance`` 的默认行为）；
+    找不到实例时抛 ``LookupError``（由 CLI 转成人话）；单个任务解析失败只落到该项的 ``notes``。
     """
     cfg_path = Path(config_path) if config_path is not None else None
     base = Path(root) if root is not None else _default_root(cfg_path)
@@ -343,7 +351,10 @@ def load_preset(
     with open(cfg_path, encoding="utf-8") as fh:
         cfg = json.load(fh)
     inst = None
-    for i in cfg.get("instances") or []:
+    instances = cfg.get("instances") or []
+    if not instance and instances:
+        instance = instances[0].get("id") or instances[0].get("name") or ""
+    for i in instances:
         if i.get("id") == instance or i.get("name") == instance:
             inst = i
             break

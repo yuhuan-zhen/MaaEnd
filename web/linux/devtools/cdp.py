@@ -1,45 +1,41 @@
-"""CdpController —— 用 CDP 直接读云串流 ``<video>`` 原生帧，并用 CDP 注入鼠标/键盘。
+"""CDP 原生帧控制器（**非生产**：仅 WSL 本地调试与对比实验用）。
 
-为什么需要它：合成器截图那条链路是 1080p →（浏览器放大）1440p →（MaaFw 缩小）720p，
-两次重采样后锐度只有原生帧方案的 ~43%（实测 501 vs 1174）。本控制器改为：
-``<video>`` 原生 1920x1080 → JPEG → Python 解码 → AREA(BOX) 降到 1280x720。
+生产路径是框架的 C++ 控制器（``Linux-Wlroots`` → ``source/MaaLinuxControlUnit`` 的
+``WlrScreencap`` + ``WlrInput``）：取帧与输入注入都是框架职责，运行层不重复实现。
+本模块只是**对照物**——用 CDP 直接读云串流 ``<video>`` 的原生帧，量化「合成器截图丢了
+多少锐度」，并给不带 sway 的 WSL 环境留一条能跑的调试通路。
 
-移植自上游 ``web/linux/cdp_controller.py``（``feat/web-linux-layer`` @ 470d64432）：
-``_Sess`` 的帧编解码/id 匹配/超时、``CdpController`` 的抓帧与输入、``PageControl`` 的
-页面控制、``make_custom_controller`` 与 ``maa.controller.CustomController`` 的组合方式
-都保持不变。改动只有三处：
+实测结论（详见 ``web/docs/cdp-native-capture.md``）：``<video>`` 原生 1920x1080 → JPEG →
+Python 解码 → ``AREA`` 降到 1280x720，锐度约为合成器链路的 2.3 倍（1174 vs 501）；但
+依赖 Chrome 调试端口、多两次 Python 解码，生产不用它。
 
-- ``import page_js`` / ``import page_state`` → 包内 ``.page``（同一份 JS 字符串、同一套状态机）；
-- 第三方依赖 ``numpy`` / ``pillow`` / ``websocket-client`` 改成按需导入：它们由 maa 运行环境
-  提供，纯导入本模块（例如 ruff、py_compile、单测收集）不该因为它们缺失而失败；
-- 自测 CLI 去掉了写死的 ``/mnt/d/maaend-dist/cdp_cap.png``（PLAN §2 问题 2 的硬编码路径）。
+只有 ``run_daily_linux.py --controller cdp`` 会用到它（显式选择，默认 wlroots）。
 
-实测要点（详见 web/docs/cdp-native-capture.md）：
-- 降采样必须放在 Python（JS 的 drawImage 只有 BOX 的 77~79%）；
-- 抓帧尺寸固定 1280x720：上游 650 个模板都在这个空间，MaaFw 不做模板缩放；
-- 单次抓帧约 190ms，用后台线程按 ~6fps 预热，动作后强制取新帧。
+用法::
 
-自测::
+    python web/linux/devtools/cdp.py --selftest          # 连一次，抓 4 帧并打锐度
+    python web/linux/devtools/cdp.py --click 640 360     # 点一下（1280x720 坐标）
+    python web/linux/devtools/cdp.py --key 27            # 发一个 Win32 虚拟键码
 
-    python -m maaend_web.cdp --selftest
-    python -m maaend_web.cdp --click 640 360
-    python -m maaend_web.cdp --key 27
+退出码：0 = 自测流程跑完（抓帧是否成功看打印，不体现在 rc）；非 0 只有 argparse 的用法错误。
 """
-
-from __future__ import annotations
 
 import argparse
 import base64
 import contextlib
 import io
 import json
+import sys
 import threading
 import time
-import urllib.request
+from pathlib import Path
 from typing import Any
 
-from . import page
-from .page import page_js
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from maaend_web import page
+from maaend_web.page import page_js
+from maaend_web.page_control import DEFAULT_PORT, Sess, install_policy, target_url
 
 try:  # 运行环境（maa）才需要；纯导入与 ruff/py_compile 不依赖
     import numpy as np
@@ -51,13 +47,7 @@ try:  # pragma: no cover
 except ImportError:  # pragma: no cover
     Image = None
 
-try:  # pragma: no cover
-    import websocket  # type: ignore[import-not-found]
-except ImportError:  # pragma: no cover
-    websocket = None
-
 CAP_W, CAP_H = 1280, 720
-DEFAULT_PORT = 9334
 
 # Win32 虚拟键码 → (key, code, text)
 VK = {
@@ -92,53 +82,15 @@ for _i in range(1, 13):  # 112..123 → F1..F12
 
 
 def _decode_data_url(s: str) -> bytes:
+    """把 ``data:image/jpeg;base64,...`` 拆成原始字节。"""
     b64 = s.split(",", 1)[1]
     return base64.b64decode(b64 + "=" * (-len(b64) % 4))
 
 
-class _Sess:
-    """一条 CDP websocket 连接。抓帧线程与输入通道各用一条，互不阻塞。
-
-    ``id`` 自增 + 只认自己 id 的响应：CDP 会把事件（``Page.*``、``Runtime.consoleAPICalled``）
-    和响应混在同一条连接上，不匹配 id 就会把事件当成结果。
-    """
-
-    def __init__(self, url: str):
-        if websocket is None:
-            raise RuntimeError("需要 websocket-client：python3 -m pip install websocket-client")
-        self.ws = websocket.create_connection(url, timeout=40, suppress_origin=True)
-        self.ws.settimeout(40)
-        self._id = 0
-        self.lock = threading.Lock()
-
-    def call(self, method: str, **params):
-        with self.lock:
-            self._id += 1
-            self.ws.send(json.dumps({"id": self._id, "method": method, "params": params}))
-            while True:
-                r = json.loads(self.ws.recv())
-                if r.get("id") == self._id:
-                    if "error" in r:
-                        raise RuntimeError(f"{method}: {str(r['error'])[:160]}")
-                    return r.get("result", {})
-
-    def ev(self, expr: str, await_p: bool = False):
-        """``Runtime.evaluate`` 取值：``returnByValue`` 下结果在 ``result.result.value``。"""
-        r = self.call("Runtime.evaluate", expression=expr, returnByValue=True, awaitPromise=await_p)
-        res = r.get("result", {})
-        if res.get("subtype") == "error":
-            raise RuntimeError(str(res.get("description"))[:200])
-        return res.get("value")
-
-    def close(self):
-        with contextlib.suppress(Exception):
-            self.ws.close()
-
-
 class CdpController:
-    """鸭子类型实现 maa.controller.CustomController 的回调集合。
+    """鸭子类型实现 maa.controller.CustomController 的回调集合（调试用，非生产）。
 
-    make_custom_controller() 会在运行时与真的 CustomController 组合成子类。
+    :func:`make_custom_controller` 在运行期与真的 ``CustomController`` 组合成子类。
     """
 
     JS_RECT = r"""
@@ -171,37 +123,28 @@ class CdpController:
         self.url_hint = url_hint
         self.fps = fps
         self.max_age_ms = max_age_ms
-        self._cap = None  # _Sess：抓帧线程专用
-        self._io = None  # _Sess：输入/查询
-        self._rect = None  # (left, top, width, height) CSS px
+        self._cap: Sess | None = None  # 抓帧线程专用
+        self._io: Sess | None = None  # 输入/查询
+        self._rect: tuple[float, float, float, float] | None = None  # (left, top, width, height) CSS px
         self._vw = self._vh = 0
         self._latest = None
         self._latest_t = 0.0
         self._dirty = True
         self._stop = threading.Event()
-        self._worker = None
+        self._worker: threading.Thread | None = None
         self.policy_installed = False
         self.last_source = ""  # "video" | "page"
         self.last_ms = 0.0
         self._last_xy = (CAP_W // 2, CAP_H // 2)
 
     # ---------------- 连接 ----------------
-    def _target_url(self) -> str:
-        ts = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json/list", timeout=6).read())
-        pages = [t for t in ts if t.get("type") == "page"]
-        if self.url_hint:
-            hit = [t for t in pages if self.url_hint in (t.get("url") or "")]
-            pages = hit or pages
-        if not pages:
-            raise RuntimeError("没有 page target")
-        return pages[0]["webSocketDebuggerUrl"]
-
     def connect(self) -> bool:
+        """连两条会话（抓帧 / 输入），装上策略，并先确认真的能抓到一帧。"""
         try:
-            url = self._target_url()
-            self._cap = _Sess(url)
-            self._io = _Sess(url)
-            self.install_policy()
+            url = target_url(self.port, self.url_hint)
+            self._cap = Sess(url)
+            self._io = Sess(url)
+            self.policy_installed = install_policy(self._io)
             self._refresh_rect()
             # 起跑前先确认能真的抓到一帧：连得上但抓不到帧（页面还没加载完）
             # 会让整批任务在"识别全失败"里空转，不如早点判定。
@@ -214,33 +157,13 @@ class CdpController:
             return False
 
     def install_policy(self) -> bool:
-        """把页面脚本注入进去：输入策略 + 抹平（对应上游 kInputPolicy + 我们的 flatten）。
-
-        两个动作缺一不可：
-
-        - ``Page.addScriptToEvaluateOnNewDocument``：之后每次导航都自动注入；
-        - 立刻在**当前**文档再跑一遍：页面可能在我们连上之前就加载完了。
-
-        策略用 ``page_js.INPUT_POLICY_JS``；外部入口 ``overlay.py`` 优先用 homesrv 的
-        ``cloud_policy_linux.js``。两者不要往同一个文档里都注入：它们的 mousemove 钩子都会
-        ``Object.defineProperties`` 写 movementX/Y（默认 non-configurable），后跑的那个会抛
-        TypeError，``relative_move`` 静默失效。
-        """
-        io = self._io
-        if io is None:
+        """重新注入输入策略 + 抹平（幂等）。策略二选一，别和 ``overlay`` 的工具叠。"""
+        if self._io is None:
             return False
-        ok = False
-        for src in (page_js.INPUT_POLICY_JS, page_js.FLATTEN_JS):
-            with contextlib.suppress(Exception):
-                io.call("Page.addScriptToEvaluateOnNewDocument", source=src)
-                ok = True
-            with contextlib.suppress(Exception):
-                io.ev(src)
-                ok = True
-        self.policy_installed = ok
-        return ok
+        self.policy_installed = install_policy(self._io)
+        return self.policy_installed
 
-    def page_state(self):
+    def page_state(self) -> page.State:
         """当前页面状态（结构化），给启动链和诊断用。"""
         if self._io is None:
             return page.State({"page": "unknown"})
@@ -248,10 +171,9 @@ class CdpController:
 
     def prepare_page(self, timeout: float = 90.0, log=None) -> bool:
         """把页面推进到「有解码帧」为止（页面状态机版启动链）。"""
-        io = self._io
-        if io is None:
+        if self._io is None:
             return False
-        return page.prepare(io, log=log or (lambda _m: None), timeout=timeout)
+        return page.prepare(self._io, log=log or (lambda _m: None), timeout=timeout)
 
     def relative_move(self, dx: int, dy: int) -> bool:
         """相对移动：锚在视口中心，由页面侧的 mousemove 钩子改写 movementX/Y。
@@ -265,19 +187,31 @@ class CdpController:
         try:
             ax, ay = page_js.RELATIVE_ANCHOR
             io.ev(f"window.__maaCloudRelativeMove && window.__maaCloudRelativeMove({int(dx)}, {int(dy)})")
-            io.call("Input.dispatchMouseEvent", type="mouseMoved", x=ax, y=ay, button="none", buttons=0, pointerType="mouse")
+            io.call(
+                "Input.dispatchMouseEvent",
+                type="mouseMoved",
+                x=ax,
+                y=ay,
+                button="none",
+                buttons=0,
+                pointerType="mouse",
+            )
             self._dirty = True
             return True
         except Exception:
             return False
 
-    def _refresh_rect(self):
-        v = self._io.ev(self.JS_RECT)
+    def _refresh_rect(self) -> bool:
+        """取 ``<video>`` 的 CSS 矩形；没有 video 时按页面视口映射。"""
+        io = self._io
+        if io is None:
+            return False
+        v = io.ev(self.JS_RECT)
         if not v:
             # 启动页/登录页没有 <video>。这时必须按页面视口映射：
             # 抓帧是 1280x720，而 CSS 视口通常是 1707x960（DSF 1.5），
             # 少了这层缩放，点击会整体偏左上（曾经表现为「Click 成功但游戏不启动」）。
-            vp = self._io.ev("JSON.stringify({w:window.innerWidth,h:window.innerHeight})")
+            vp = io.ev("JSON.stringify({w:window.innerWidth,h:window.innerHeight})")
             if vp:
                 d = json.loads(vp)
                 if d.get("w") and d.get("h"):
@@ -291,7 +225,8 @@ class CdpController:
         self._vw, self._vh = d["vw"], d["vh"]
         return True
 
-    def _start_worker(self):
+    def _start_worker(self) -> None:
+        """起后台预抓线程（约 ``fps``，默认 6）：动作后仍会强制取新帧。"""
         if self._worker and self._worker.is_alive():
             return
         self._stop.clear()
@@ -301,15 +236,12 @@ class CdpController:
             while not self._stop.is_set():
                 t0 = time.time()
                 try:
-                    f = self._grab(self._cap)
-                    self._latest = f
+                    self._latest = self._grab(self._cap)
                     self._latest_t = time.time()
                     self._dirty = False
                 except Exception:
-                    try:  # 连接可能被页面刷新断掉
-                        self._cap = _Sess(self._target_url())
-                    except Exception:
-                        time.sleep(0.5)
+                    with contextlib.suppress(Exception):  # 连接可能被页面刷新断掉
+                        self._cap = Sess(target_url(self.port, self.url_hint))
                 dt = time.time() - t0
                 if dt < period:
                     time.sleep(period - dt)
@@ -318,10 +250,12 @@ class CdpController:
         self._worker.start()
 
     # ---------------- 抓帧 ----------------
-    def _grab(self, sess: _Sess):
+    def _grab(self, sess: Sess | None):
         """取一帧 BGR 的 1280x720：优先 ``<video>`` 原生帧，拿不到就 ``Page.captureScreenshot``。"""
         if np is None or Image is None:
             raise RuntimeError("需要 numpy 与 pillow：python3 -m pip install numpy pillow")
+        if sess is None:
+            raise RuntimeError("抓帧会话未建立")
         t0 = time.time()
         try:
             url = sess.ev(self.JS_FRAME)
@@ -340,13 +274,14 @@ class CdpController:
         self.last_ms = (time.time() - t0) * 1000
         return np.asarray(img)[:, :, ::-1].copy()  # MaaFw 要 BGR
 
-    def _ensure_sess(self) -> _Sess:
+    def _ensure_sess(self) -> Sess:
         """抓帧连接可能因页面刷新/浏览器重启而失效，这里按需重建。"""
         if self._cap is None:
-            self._cap = _Sess(self._target_url())
+            self._cap = Sess(target_url(self.port, self.url_hint))
         return self._cap
 
     def screencap(self):
+        """框架回调：返回 1280x720 BGR 帧（新鲜度由 ``max_age_ms`` 决定）。"""
         age = (time.time() - self._latest_t) * 1000
         if not self._dirty and self._latest is not None and age < self.max_age_ms:
             return self._latest.copy()  # 预抓线程已备好，直接给
@@ -360,12 +295,12 @@ class CdpController:
         self._dirty = False
         return frame.copy()
 
-    def invalidate(self):
+    def invalidate(self) -> None:
         """外部改了页面状态（JS 点了按钮等）后调用，强制下一帧重抓。"""
         self._dirty = True
 
     # ---------------- 坐标 / 输入 ----------------
-    def _to_css(self, x: int, y: int):
+    def _to_css(self, x: int, y: int) -> tuple[float, float]:
         """1280x720 抓帧坐标 → 页面 CSS 坐标。"""
         if self._rect is None:
             self._refresh_rect()
@@ -374,9 +309,11 @@ class CdpController:
         left, t, w, h = self._rect
         return left + x * w / CAP_W, t + y * h / CAP_H
 
-    def _mouse(self, kind: str, x: int, y: int, buttons: int = 1, clicks: int = 0):
+    def _mouse(self, kind: str, x: int, y: int, buttons: int = 1, clicks: int = 0) -> None:
         self._last_xy = (x, y)
         cx, cy = self._to_css(x, y)
+        if self._io is None:
+            raise RuntimeError("输入会话未建立")
         self._io.call(
             "Input.dispatchMouseEvent",
             type=kind,
@@ -448,6 +385,8 @@ class CdpController:
         if kind == "rawKeyDown" and text:
             p["text"] = text
         try:
+            if self._io is None:
+                return False
             self._io.call("Input.dispatchKeyEvent", **p)
             self._dirty = True
             return True
@@ -462,6 +401,8 @@ class CdpController:
 
     def input_text(self, text: str) -> bool:
         try:
+            if self._io is None:
+                return False
             self._io.call("Input.insertText", text=text)
             self._dirty = True
             return True
@@ -471,6 +412,8 @@ class CdpController:
     def scroll(self, dx: int, dy: int) -> bool:
         try:
             cx, cy = self._to_css(CAP_W // 2, CAP_H // 2)
+            if self._io is None:
+                return False
             self._io.call("Input.dispatchMouseEvent", type="mouseWheel", x=cx, y=cy, deltaX=dx, deltaY=dy)
             self._dirty = True
             return True
@@ -490,83 +433,11 @@ class CdpController:
     def inactive(self) -> bool:
         return False
 
-    def close(self):
+    def close(self) -> None:
         self._stop.set()
         for s in (self._cap, self._io):
             if s:
                 s.close()
-
-
-class PageControl:
-    """只做「页面状态机 + 注入 + 页面内输入」，不参与取帧。
-
-    给 ``--controller wlroots`` 用：帧（识别输入）走合成器截图，但「现在在哪一态、
-    怎么点开始游戏」这件事只有页面自己知道，只能问 CDP。两套控制器共用这一层，
-    启动链就不再依赖 pipeline 的那 9 个节点，也不再随控制器切换而失效。
-
-        ctl = PageControl(); ctl.connect(); ctl.prepare_page()
-    """
-
-    def __init__(self, port: int = DEFAULT_PORT, url_hint: str = "endfield"):
-        self.port = port
-        self.url_hint = url_hint
-        self._io = None
-
-    def _target_url(self) -> str:
-        ts = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json/list", timeout=6).read())
-        pages = [
-            t for t in ts if t.get("type") == "page" and str(t.get("url", "")).startswith(("http://", "https://"))
-        ]
-        if self.url_hint:
-            hit = [t for t in pages if self.url_hint in (t.get("url") or "")]
-            pages = hit or pages
-        if not pages:
-            raise RuntimeError("没有 page target")
-        return pages[0]["webSocketDebuggerUrl"]
-
-    def connect(self) -> bool:
-        try:
-            self._io = _Sess(self._target_url())
-            self.install_policy()
-            return True
-        except Exception:
-            return False
-
-    def install_policy(self) -> bool:
-        io = self._io
-        if io is None:
-            return False
-        ok = False
-        for src in (page_js.INPUT_POLICY_JS, page_js.FLATTEN_JS):
-            with contextlib.suppress(Exception):
-                io.call("Page.addScriptToEvaluateOnNewDocument", source=src)
-                ok = True
-            with contextlib.suppress(Exception):
-                io.ev(src)
-                ok = True
-        return ok
-
-    def page_state(self):
-        if self._io is None:
-            return page.State({"page": "unknown"})
-        return page.inspect(self._io)
-
-    def prepare_page(self, timeout: float = 90.0, log=None) -> bool:
-        if self._io is None:
-            return False
-        return page.prepare(self._io, log=log or (lambda _m: None), timeout=timeout)
-
-    def relative_move(self, dx: int, dy: int) -> bool:
-        if self._io is None:
-            return False
-        with contextlib.suppress(Exception):
-            self._io.call(
-                "Runtime.evaluate",
-                expression=f"window.__maaRelativeMove({dx},{dy})",
-                returnByValue=True,
-            )
-            return True
-        return False
 
 
 def make_custom_controller(**kw):
@@ -587,6 +458,7 @@ def make_custom_controller(**kw):
 
 # ------------------------------------------------------------------ 自测
 def main(argv: list[str] | None = None) -> int:
+    """自测入口：连一次控制器，按参数抓帧 / 点击 / 发键。"""
     ap = argparse.ArgumentParser(description="CDP 原生帧控制器自测（需要 Chrome 已开 --remote-debugging-port）")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--selftest", action="store_true")

@@ -2,9 +2,15 @@
 
 ``homesrv/chrome_homesrv.sh`` 与 ``homesrv/lib.sh`` 仍直接跑
 ``python3 overlay_ctl.py --check|--once|--watch``，路径与参数不变。
-"""
 
-from __future__ import annotations
+用法::
+
+    python3 overlay_ctl.py --check      # 只探测
+    python3 overlay_ctl.py --once       # 注入一次
+    python3 overlay_ctl.py --watch      # 常驻巡检
+
+退出码：0 = 全隐藏 / 注入成功 / 正常退出；1 = 仍有可见浮层或注入失败；2 = 连不上 CDP。
+"""
 
 import os
 import sys

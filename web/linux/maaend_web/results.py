@@ -1,9 +1,13 @@
 """跑批结果的 JSONL 落盘与汇总文本。
 
 字段顺序就是 JSONL 里的键顺序，与重构前 ``record()`` 写出的对象一致：name、entry、done、succeeded、seconds、last_node、timeout、attempt。
-"""
 
-from __future__ import annotations
+用法::
+
+    writer = ResultWriter(Path(probe_out) / "daily_linux_progress.jsonl")
+    writer.write(TaskResult(...))
+    print(writer.summary(results))
+"""
 
 import json
 from collections.abc import Sequence

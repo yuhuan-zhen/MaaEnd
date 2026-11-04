@@ -1,18 +1,18 @@
 """日常编排：按 MXU 预设顺序跑任务，逐项记录结果。
 
-用法:
-  python3 run_daily_linux.py --only 1,2,3          # 试点
-  python3 run_daily_linux.py                       # 全量 14 项
-  python3 run_daily_linux.py --from 5 --to 9
-选项覆盖由 preset 解析（复现 MXU GUI 的行为），不是手写。
+复现 MXU 的「预设 → 任务列表 → 选项覆盖」行为：预设解析在 :mod:`maaend_web.preset`，
+选择语义在 :mod:`maaend_web.plan`，这里只做编排（选任务 → 起资源/控制器/agent → 跑 → 汇总）。
 
-合并说明（2026-11-04）：homesrv 生产版贡献恢复链/双 agent/--attempts/逐项超时/
-逐项在游戏内检查，上游重构版贡献页面状态机/--controller cdp/--no-overlay/failshot。
-两版命令行是叠加关系：参数只增不减，默认值按生产（instance=hyasuml、attempts=2、
-controller=wlroots）。
+用法::
+
+    python3 run_daily_linux.py --only 1,2,3          # 试点
+    python3 run_daily_linux.py                       # 全量
+    python3 run_daily_linux.py --from 5 --to 9
+    python3 run_daily_linux.py --instance <预设 id> --dry-run
+
+退出码：0 = 全部成功；3 = 资源加载失败；4 = 控制器连不上；7 = 有任务失败/超时。
+（其余异常走 Python 默认的 rc=1；预设里找不到实例时抛 SystemExit 文案，rc=1。）
 """
-
-from __future__ import annotations
 
 import argparse
 import contextlib
@@ -58,7 +58,11 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--tasks", default="", help="按名字或序号挑任务，支持 1-5 / WebStartGame,VisitFriends")
     ap.add_argument("--from", dest="frm", type=int, default=1)
     ap.add_argument("--to", dest="to", type=int, default=99)
-    ap.add_argument("--instance", default="hyasuml")
+    ap.add_argument(
+        "--instance",
+        default=os.environ.get("MAAEND_INSTANCE", ""),
+        help="预设实例 id（默认取 MAAEND_INSTANCE，都没有时用 mxu-MaaEnd.json 里的第一个实例）",
+    )
     ap.add_argument("--skip-in-game-check", action="store_true")
     ap.add_argument(
         "--attempts",
@@ -247,7 +251,7 @@ def _connect_controller(kind: str, settings: Any) -> Any:
 def _page_control(settings: Any) -> Any:
     """页面控制层（有 CDP 才有）：拿不到返回 None，启动链回退 pipeline。"""
     try:
-        from maaend_web.cdp import PageControl
+        from maaend_web.page_control import PageControl
 
         page_ctl = PageControl(port=settings.cdp_port)
         if page_ctl.connect():

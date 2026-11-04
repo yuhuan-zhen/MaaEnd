@@ -1,14 +1,10 @@
 """``maaend_web.page.prepare`` 的分支回归（不连浏览器）。
 
-移植自上游 ``web/linux/tests/test_page_state.py``（``feat/web-linux-layer`` @ 470d64432），
-用例与断言逐字保留，只改两处 import：``page_state`` → ``maaend_web.page``；``page_js``
-仍是顶层文件（与 node 测试共用同一份 JS 字符串，导入方式不变）。
+页面侧的 JS 字符串在 ``maaend_web/page_js.py``，与本目录的 ``page_state.test.mjs`` 同一份；
+这里只测 Python 侧的「求值 → 分支 → 动作」。
 
-JS 状态判定由 page_state.test.mjs 覆盖；这里只测 Python 侧的「求值 → 分支 → 动作」。
-跑法：``python -m unittest tests.test_page_state -v``（在 ``web/linux`` 下）。
+跑法：``python -m unittest discover -s web/linux/tests -v``（在仓库根）。
 """
-
-from __future__ import annotations
 
 import json
 import os
@@ -17,8 +13,8 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import page_js
 from maaend_web import page as page_state
+from maaend_web import page_js
 
 
 class FakeSess:

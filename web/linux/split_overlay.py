@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""把 web/resource_web 的覆盖层拆成三层，用来做「兼容性阶梯」验证。
+"""把 assets/resource_cloud_web 的覆盖层拆成三层，用来做「兼容性阶梯」验证。
 
 目的：回答「别人写的节点能不能直接拿来用」。拆完以后可以按层加载：
 
@@ -15,17 +15,24 @@
 
 用法：python3 split_overlay.py [--write]
 不带 --write 只报告分组结果。
+
+输入 ``pipeline/nodes.json`` 是 JSONC（MaaEnd 发行版带 ``//`` 注释与尾逗号），
+所以用 ``maaend_web.jsonc.load_jsonc`` 读，不能用标准库 ``json``。
 """
 
-from __future__ import annotations
-
+import glob
 import json
 import os
 import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.normpath(os.path.join(HERE, "..", "resource_web"))
+SRC = os.path.normpath(os.path.join(HERE, "..", "..", "assets", "resource_cloud_web"))
+
+# 当独立脚本（非包内模块）运行时，先把本目录塞进 sys.path 才能 import maaend_web。
+sys.path.insert(0, HERE)
+
+from maaend_web.jsonc import load_jsonc  # noqa: E402
 
 # 启动链：把页面从「落地页/排队/月卡」推到游戏内 —— launcher --prepare 接管
 STARTUP = {
@@ -53,7 +60,9 @@ LAYERS = {
 
 
 def main(write: bool) -> int:
-    nodes = json.load(open(os.path.join(SRC, "pipeline", "nodes.json"), encoding="utf-8-sig"))
+    nodes: dict = {}
+    for path in sorted(glob.glob(os.path.join(SRC, "pipeline", "**", "*.json"), recursive=True)):
+        nodes.update(load_jsonc(path))
     groups: dict[str, dict] = {k: {} for k in LAYERS}
     unknown = []
 

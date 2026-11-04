@@ -1,10 +1,17 @@
 """runtime 框架层：LD_PRELOAD、Linux 控制器选择、agent 生命周期、tasker 配置。
 
 这一层是唯一碰 `maa` 的 runtime 模块，而且所有 `maa` 导入都写在函数体内：
-`--help` / `--dry-run` / 单元测试因此不需要安装框架（见 PLAN.md 第 4 节的签名约定）。
-"""
+`--help` / `--dry-run` / 单元测试因此不需要安装框架。
 
-from __future__ import annotations
+取帧与输入注入是框架 C++ 的职责（``source/MaaLinuxControlUnit``），这里只做选择与装配；
+``cdp`` 只是调试对照路径，实现在 ``web/linux/devtools/cdp.py``（非生产）。
+
+用法::
+
+    ensure_preload(log)                      # 需要 relative_move/scroll 时给自己 exec 一次
+    ctrl = make_controller("wlroots", settings, log)
+    agents = start_agents(res, settings, log=log)
+"""
 
 import contextlib
 import json
@@ -13,10 +20,9 @@ import subprocess
 import sys
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:  # 只用于类型标注：真实 import 在函数里
-    from maaend_web.config import Settings
+from maaend_web.config import Settings
 
 Log = Callable[[str], None]
 
@@ -79,11 +85,11 @@ def make_controller(kind: str, settings: Settings, log: Log = print) -> Any:
     wlroots 优先用新的 LinuxController：只有它背后的 LinuxControlUnitMgr 实现
     relative_move / scroll（转视角、滚轮）；废弃的 WlRootsController 走兼容层，
     这两个能力一律返回 "not supported"。
-    cdp 走云串流原生帧（maaend_web.cdp.make_custom_controller）：<video> 原生帧比
-    合成器截图少两次重采样，锐度高；输入也走 CDP 注入，不依赖 sway。
+    cdp 是调试对照路径（``devtools/cdp.py``）：<video> 原生帧比合成器截图少两次重采样，
+    锐度高；输入也走 CDP 注入，不依赖 sway。生产默认不走它。
     """
     if kind == CONTROLLER_CDP:
-        from maaend_web.cdp import make_custom_controller
+        from devtools.cdp import make_custom_controller
 
         return make_custom_controller(port=settings.cdp_port)
 
@@ -122,14 +128,15 @@ def start_agent(
     注册 MapFind / MapLocateAssertLocation / MapNavigateAction 等地图类识别与
     走位动作。两者缺一，任务都会失败。
     """
-    from maa.agent_client import AgentClient
-
     exe = Path(bin_path) if bin_path is not None else Path(settings.agent_bin)
     tag = tag or exe.name
     agent_dir = exe.parent
     if not exe.exists():
+        # 先查路径再 import maa：配错 agent 路径时不该报「没有 MaaFramework」。
         log(f"  [X] 找不到 agent: {exe}")
         return None, None
+
+    from maa.agent_client import AgentClient
 
     client = AgentClient.create_tcp(0)
     ident = client.identifier

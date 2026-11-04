@@ -14,8 +14,6 @@
 跑法：``python -m unittest tests.test_overlay_ctl -v``（在 ``web/linux`` 下）。
 """
 
-from __future__ import annotations
-
 import contextlib
 import io
 import json
@@ -29,8 +27,8 @@ from unittest import mock
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import page_js
 from maaend_web import overlay as overlay_ctl
+from maaend_web import page_js
 from maaend_web.cli import overlay as overlay_cli
 
 

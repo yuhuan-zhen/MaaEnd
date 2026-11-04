@@ -1,9 +1,12 @@
 """路径、环境变量、端口与超时的单一真源。
 
-部署脚本（``homesrv/*.sh``）只导出环境变量，具体默认值在这里拼装：runtime/cli 读 ``Settings``，不再各自 ``os.environ.get``。环境变量名与重构前一致（见 PLAN 第 5 节第 3 条），因此 cron 与部署脚本不用改。
-"""
+部署脚本（``homesrv/*.sh``）只导出环境变量，具体默认值在这里拼装：runtime/cli 读 ``Settings``，不再各自 ``os.environ.get``。环境变量名与重构前一致，因此 cron 与部署脚本不用改。
 
-from __future__ import annotations
+用法::
+
+    settings = load_settings()                  # 读 os.environ
+    settings = load_settings({"MAAEND_DIST": "/opt/MaaEnd"})   # 脱环境单测
+"""
 
 import os
 from collections.abc import Mapping

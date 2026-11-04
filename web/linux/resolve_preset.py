@@ -1,12 +1,15 @@
 """兼容层：实现已迁到 :mod:`maaend_web.preset`。
 
 保留旧模块名与 ``ROOT`` / ``CONFIG`` / ``load_all`` / ``resolve_task`` 等导出，
-供 ``homesrv/option_audit.py``、``tools/probes/*`` 与旧文档命令继续 import。
+供 ``homesrv/option_audit.py`` 与旧文档命令继续 import；新代码请直接
+``from maaend_web.preset import ...``。
 
-新代码请直接 ``from maaend_web.preset import ...``。
+用法::
+
+    python3 resolve_preset.py [实例 id] [--dump]    # 不写实例时用预设里的第一个
+
+退出码：0 = 打印完成；1 = 找不到实例（``LookupError`` 转成 SystemExit 文案）。
 """
-
-from __future__ import annotations
 
 import os
 import sys
@@ -23,9 +26,12 @@ __all__ = list(_core_all)
 def main(argv: list[str] | None = None) -> int:
     """``python3 resolve_preset.py <实例> [--dump]``：打印解析后的计划。"""
     args = list(sys.argv[1:] if argv is None else argv)
-    iid = args[0] if args and not args[0].startswith("-") else "hyasuml"
+    iid = args[0] if args and not args[0].startswith("-") else ""
     dump = "--dump" in args
-    inst, plan = load_preset(iid)
+    try:
+        inst, plan = load_preset(iid)
+    except LookupError as e:
+        raise SystemExit(str(e)) from None
     print(
         f"实例: {inst.get('name')} ({inst.get('id')})  "
         f"控制器={inst.get('controllerName')}  资源={inst.get('resourceName')}"

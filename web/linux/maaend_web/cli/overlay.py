@@ -1,6 +1,12 @@
 """浮层 CLI：只做 argparse，动作与退出码都在 :mod:`maaend_web.overlay`。
 
-退出码（与上游 ``overlay_ctl.py`` 一致）：
+用法::
+
+    python3 overlay_ctl.py --check        # 只探测并打印 JSON
+    python3 overlay_ctl.py --once         # 注入一次
+    python3 overlay_ctl.py --watch        # 常驻巡检（文档替换后自动重注入）
+
+退出码（``homesrv/lib.sh`` 与 ``chrome_homesrv.sh`` 依赖这套取值）：
 
 ===  ============================================================
 0    全部已隐藏（--check）/ 注入成功（--once）/ 正常退出（--watch）
@@ -11,8 +17,6 @@
 ``--ball-only`` 是 ``homesrv/hide_cloud_overlay.py`` 的旧参数：现在默认抹平就把悬浮球与
 延迟角标一起藏（``page_js.FLATTEN_JS`` 的容器级规则），参数只为不打断老脚本而保留。
 """
-
-from __future__ import annotations
 
 import argparse
 

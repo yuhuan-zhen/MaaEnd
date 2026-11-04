@@ -1,10 +1,17 @@
 """收尾用：让页面离开云游戏，通知服务端正常结束会话，再关进程。
 
 直接 pkill Chrome 会让云端认为会话没退干净，下一次点「开始游戏」会弹
-「您上次游戏的数据正在火速处理中，请稍后重试」。
-"""
+「您上次游戏的数据正在火速处理中，请稍后重试」。所以收尾必须先导航走再等一会。
 
-from __future__ import annotations
+为什么留在顶层：``homesrv/lib.sh``、``homesrv/stop_homesrv.sh`` 与
+``devtools/wsl/daily_run_wsl.sh`` 都按路径直接调它。
+
+用法::
+
+    python3 leave_game.py [--port 9334] [--url about:blank] [--wait 4]
+
+退出码：恒为 0 —— 收尾失败不该让外层脚本判成任务失败（CDP 不可达只打印一行）。
+"""
 
 import argparse
 import contextlib

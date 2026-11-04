@@ -3,8 +3,6 @@
 跑法：python -m unittest discover -s web/linux/tests -v
 """
 
-from __future__ import annotations
-
 import os
 import sys
 import tempfile

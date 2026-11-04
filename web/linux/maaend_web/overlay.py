@@ -1,37 +1,28 @@
 """云网页端浮层控制：注入「页面策略 + 抹平」，探测悬浮球 / 延迟角标，文档替换后自愈。
 
-本模块由上游两条线合并而来，两边各出一半：
+本模块回答三件事：什么时候注入、注进去没有、文档换了以后失效没有。JS 只有一份，在
+:mod:`maaend_web.page_js`：
 
-- ``D:\\maaend-upstream\\web\\linux\\overlay_ctl.py``（PR 线）提供**骨架**：双注入
-  （``Page.addScriptToEvaluateOnNewDocument`` 注册 + 当前文档立刻跑一遍）、每个 target
-  **一条长连接**的 watch、``needs_reinject`` 自愈判据、``--check`` 的 0/1/2 退出码、
-  ``select_targets`` / ``inject_commands`` / ``summarize`` / ``all_hidden`` 这些可单测的纯函数。
-- ``homesrv/hide_cloud_overlay.py``（homesrv 生产线）提供**内容**：悬浮球
-  （``e4MbkW`` / ``hbU_7F``）与延迟角标（``_gEApb`` / ``K_iy0u``）按**容器**一起隐藏、
-  文本 ``\\d+ ms`` 命中后向上 lift 最多两层、几何兜底，以及 ``cloud_policy_linux.js``
-  这份页面策略（``document.hidden`` 覆写、无按键移动归零、拒绝指针锁定、禁 WebGL2、
-  keydown 补 mouseenter）。
+- ``FLATTEN_JS`` 负责容器级隐藏与兜底（悬浮球 ``e4MbkW`` / ``hbU_7F``、延迟角标
+  ``_gEApb`` / ``K_iy0u``，文本 ``\\d+ ms`` 命中后向上 lift 最多两层）；
+- ``INPUT_POLICY_JS`` 是输入策略兜底（``document.hidden`` 覆写、无按键移动归零、
+  拒绝指针锁定、禁 WebGL2、keydown 补 mouseenter），生产优先用 homesrv 的
+  ``cloud_policy_linux.js``；
+- ``PROBE_JS`` 供 ``--check`` 回读元素个数与隐藏状态。
 
-合并后的分工：容器级隐藏与兜底的 JS **只有一份**，在 ``page_js.FLATTEN_JS``（``linux-2``
-已把 hide_cloud_overlay 的语义并进去，含去重与 lift 上限）。本模块只回答三件事：什么时候
-注入、注进去没有、文档换了以后失效没有。``overlay_fingerprint()`` 把两套 class 指纹外露，
-方便云前端改版后核对选择器是否还命中。
+``overlay_fingerprint()`` 把两套 class 指纹外露，方便云前端改版后核对选择器是否还命中。
 
 为什么 watch 必须长连接：``Page.addScriptToEvaluateOnNewDocument`` 绑在 CDP session 上，
-session 一关就失效（2026-11-02 实测：``counter`` 从 ``linux-2`` 变回 ``null``，页面上仍有
-9ms 角标）。``hide_cloud_overlay.py`` 用 ``registered`` 集合只注入一次、每轮重开连接，正好
-踩这个坑；这里统一用 PR 线的长连接 + 每轮 probe 判失效 + 失效重注入。
+session 一关就失效（实测 ``counter`` 从 ``linux-2`` 变回 ``null``，页面上仍有 9ms 角标），
+所以这里用「一条长连接 + 每轮 probe 判失效 + 失效重注入」。
 
-为什么不把 ``cloud_policy_linux.js`` 与 ``page_js.INPUT_POLICY_JS`` 一起注入：两者的
-mousemove 钩子都会 ``Object.defineProperties(event, {movementX: …})``，而这样定义出来的属性
-默认 non-configurable，先跑的那个会把后跑的直接顶成 TypeError，``relative_move`` 静默失效。
-所以策略**二选一**：生产文件在就用它（homesrv 的部署形态），不在才退回 ``INPUT_POLICY_JS``；
-``CdpController.install_policy()`` 用的是后者，各自幂等，别在同一个文档里叠。
+为什么不把 ``cloud_policy_linux.js`` 与 ``INPUT_POLICY_JS`` 一起注入：两者的 mousemove 钩子
+都会 ``Object.defineProperties(event, {movementX: …})``，这样定义出来的属性默认
+non-configurable，先跑的那个会把后跑的直接顶成 TypeError，``relative_move`` 静默失效。
+所以策略**二选一**：生产文件在就用它（homesrv 的部署形态），不在才退回 ``INPUT_POLICY_JS``。
 
-用法见 ``maaend_web.cli.overlay``（``--check`` / ``--once`` / ``--watch``）。
+用法与退出码见 :mod:`maaend_web.cli.overlay`（``--check`` / ``--once`` / ``--watch``）。
 """
-
-from __future__ import annotations
 
 import contextlib
 import json
@@ -42,7 +33,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .page import page_js
+from . import page_js
 
 try:  # websocket-client 只在真正连浏览器时才需要，纯函数测试不依赖它
     import websocket  # type: ignore[import-not-found]

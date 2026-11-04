@@ -3,8 +3,6 @@
 跑法：python -m unittest discover -s web/linux/tests -v
 """
 
-from __future__ import annotations
-
 import json
 import os
 import sys
@@ -368,7 +366,7 @@ class LoadPresetTest(unittest.TestCase):
             {
                 "instances": [
                     {
-                        "id": "hmuddz8",
+                        "id": "friend-a",
                         "name": "朋友家",
                         "controllerName": "Linux-Wlroots",
                         "resourceName": "官服-网页端",
@@ -385,13 +383,13 @@ class LoadPresetTest(unittest.TestCase):
         )
 
     def test_instance_found_by_id(self) -> None:
-        inst, plan = load_preset("hmuddz8", root=self.root)
+        inst, plan = load_preset("friend-a", root=self.root)
         self.assertEqual(inst["name"], "朋友家")
         self.assertEqual(len(plan), 5)
 
     def test_instance_found_by_name(self) -> None:
         inst, _plan = load_preset("朋友家", root=self.root)
-        self.assertEqual(inst["id"], "hmuddz8")
+        self.assertEqual(inst["id"], "friend-a")
 
     def test_missing_instance_raises_lookup_error(self) -> None:
         with self.assertRaises(LookupError) as ctx:
@@ -399,7 +397,7 @@ class LoadPresetTest(unittest.TestCase):
         self.assertEqual(str(ctx.exception), "找不到实例: nope")
 
     def test_plan_item_fields(self) -> None:
-        _inst, plan = load_preset("hmuddz8", root=self.root)
+        _inst, plan = load_preset("friend-a", root=self.root)
         first = plan[0]
         self.assertEqual(first.name, "VisitFriends")
         self.assertEqual(first.entry, "VisitFriendsEntry")
@@ -410,28 +408,28 @@ class LoadPresetTest(unittest.TestCase):
         self.assertIsNone(first.error)
 
     def test_disabled_task_kept_with_flag(self) -> None:
-        _inst, plan = load_preset("hmuddz8", root=self.root)
+        _inst, plan = load_preset("friend-a", root=self.root)
         self.assertFalse(plan[1].enabled)
 
     def test_missing_task_becomes_error_item(self) -> None:
-        _inst, plan = load_preset("hmuddz8", root=self.root)
+        _inst, plan = load_preset("friend-a", root=self.root)
         self.assertIsNone(plan[2].entry)
         self.assertEqual(plan[2].error, "任务不存在于接口")
         self.assertEqual(plan[2].n_override, 0)
 
     def test_fallback_entry_for_web_tasks(self) -> None:
-        _inst, plan = load_preset("hmuddz8", root=self.root)
+        _inst, plan = load_preset("friend-a", root=self.root)
         self.assertEqual(plan[3].entry, "WebStartGameEntry")
         self.assertEqual(plan[3].notes, ["内置回退"])
 
     def test_task_level_exception_is_captured(self) -> None:
-        _inst, plan = load_preset("hmuddz8", root=self.root)
+        _inst, plan = load_preset("friend-a", root=self.root)
         self.assertEqual(plan[4].entry, "VisitFriendsEntry")
         self.assertTrue(plan[4].notes[0].startswith("ERROR:"))
         self.assertEqual(plan[4].override, {})
 
     def test_dict_style_access(self) -> None:
-        _inst, plan = load_preset("hmuddz8", root=self.root)
+        _inst, plan = load_preset("friend-a", root=self.root)
         item = plan[0]
         self.assertEqual(item["name"], "VisitFriends")
         self.assertEqual(item["n_override"], 1)
@@ -443,8 +441,8 @@ class LoadPresetTest(unittest.TestCase):
             _ = item["missing"]
 
     def test_config_path_implies_root(self) -> None:
-        inst, plan = load_preset("hmuddz8", config_path=self.root / "config" / "mxu-MaaEnd.json")
-        self.assertEqual(inst["id"], "hmuddz8")
+        inst, plan = load_preset("friend-a", config_path=self.root / "config" / "mxu-MaaEnd.json")
+        self.assertEqual(inst["id"], "friend-a")
         self.assertEqual(len(plan), 5)
 
     def test_plan_item_is_a_dataclass_too(self) -> None:

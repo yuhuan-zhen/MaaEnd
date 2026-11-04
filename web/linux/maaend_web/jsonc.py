@@ -1,9 +1,12 @@
 """JSONC 读取：先按标准 JSON 解析，失败再去注释与尾逗号。
 
-MaaEnd 发行版的 ``interface.json`` 与资源 bundle 里带 ``//``、``/* */`` 注释和尾逗号，标准库 ``json`` 读不了。这里的清理只覆盖注释与尾逗号，不处理单引号、无引号键这类非 JSON 语法。
-"""
+MaaEnd 发行版的 ``interface.json`` 与资源 bundle 里带 ``//``、``/* */`` 注释和尾逗号，标准库 ``json`` 读不了。这里的清理只覆盖注释与尾逗号，不处理单引号、无引号键这类非 JSON 语法；字符串里的 ``//``（URL）不会被误删。
 
-from __future__ import annotations
+用法::
+
+    data = load_jsonc(path)                 # 文件（按 utf-8-sig 吃 BOM）
+    data = loads_jsonc(text)                # 内存里的字符串
+"""
 
 import json
 import re

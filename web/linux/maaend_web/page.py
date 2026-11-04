@@ -3,47 +3,23 @@
 对应 MaaEnd#6746 的 ``main.cpp::prepare_host``：启动链不再散在 pipeline 节点里，
 而是「求值 → 分支 → 动作」三步。Linux 侧用它替代 onboarding 那批节点。
 
-移植自上游 ``web/linux/page_state.py``（``feat/web-linux-layer`` @ 470d64432），
-State 的每个 property、``inspect`` / ``click_css`` / ``reload_soft`` / ``prepare`` 的分支
-逐字保留。唯一改动是 ``import page_js``：顶层 ``page_js.py`` 不是包成员（node 测试与
-Python 测试共用同一份 JS 字符串），这里按文件路径加载一次，见 :func:`_load_page_js`。
+页面侧的 JS 在 :mod:`maaend_web.page_js`（Python 与 node 测试共用同一份字符串），
+本模块只做 Python 侧的分支与动作，所以不依赖 maa、也不依赖浏览器：给一个实现了
+``call`` / ``ev`` 的 ``sess`` 就能跑，单测里塞个假对象即可。
+
+用法::
+
+    st = inspect(sess)                 # 求值一次
+    prepare(sess, log=print, timeout=90)  # 推到「有解码帧」
 """
 
-from __future__ import annotations
-
-import importlib.util
 import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
-
-def _load_page_js():
-    """加载顶层 ``page_js.py``（JS 源码的唯一真源）：不复制字符串，也不改 ``sys.path``。
-
-    两种布局都要能用：
-
-    - 仓库内：``web/linux/maaend_web/page.py`` → 上一级的 ``web/linux/page_js.py``；
-    - 安装态：``page_js`` 与包一起装进 site-packages，直接 import。
-    """
-    here = Path(__file__).resolve()
-    for cand in (here.parent.parent / "page_js.py", here.parent / "page_js.py"):
-        if cand.is_file():
-            spec = importlib.util.spec_from_file_location("maaend_web._page_js", cand)
-            if spec is not None and spec.loader is not None:
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
-                return module
-    try:
-        import page_js as module
-    except ImportError as exc:  # pragma: no cover - 只在打包漏文件时发生
-        raise ImportError("找不到 page_js.py（期望 %s）" % (here.parent.parent / "page_js.py")) from exc
-    return module
-
-
-page_js = _load_page_js()
+from . import page_js
 
 Log = Callable[[str], None]
 

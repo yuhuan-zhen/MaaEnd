@@ -8,7 +8,7 @@ import {readFileSync} from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const source = readFileSync(new URL("../page_js.py", import.meta.url), "utf8");
+const source = readFileSync(new URL("../maaend_web/page_js.py", import.meta.url), "utf8");
 const script = source.match(/FLATTEN_JS = r"""([\s\S]*?)"""/)?.[1];
 assert.ok(script, "没能从 page_js.py 抽出 FLATTEN_JS");
 const probeScript = source.match(/PROBE_JS = r"""([\s\S]*?)"""/)?.[1];

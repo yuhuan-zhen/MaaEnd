@@ -2,9 +2,15 @@
 
 这些动作用来兜底「云会话掉回落地页、子场景退不出来、领奖弹窗挡住画面」这类
 网页端才会有的故障；纯 pipeline 里没有等价节点，所以放在 Python 侧。
-"""
 
-from __future__ import annotations
+层级：runtime（碰 ``maa``，但所有导入都在函数体内，可离线单测）。
+
+用法::
+
+    rec = Recoverer(tasker, ctrl, settings, log)
+    if not rec.in_world():
+        rec.recover("[前置]")
+"""
 
 import contextlib
 import subprocess
@@ -12,10 +18,9 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:  # 只用于类型标注：真实 import 在函数里
-    from maaend_web.config import Settings
+from maaend_web.config import Settings
 
 Log = Callable[[str], None]
 
