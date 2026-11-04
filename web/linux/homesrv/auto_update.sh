@@ -166,13 +166,6 @@ rollback() {
   [ -d "$DEST/maafw" ] && mv "$DEST/maafw" "$ROOT/maafw"
   [ -f "$DEST/interface.json" ] && cp -a "$DEST/interface.json" "$ROOT/interface.json"
   [ -d "$DEST/agent" ] && cp -a "$DEST/agent/." "$ROOT/agent/" 2>/dev/null
-  # 平台层 / 语言包也一起回滚（存在才回，旧的部署里可能没有）
-  for d in locales resource_linux resource_adb resource_cloud_adb resource_macos resource_playcover; do
-    if [ -e "$DEST/$d" ]; then
-      rm -rf "$ROOT/$d"
-      cp -a "$DEST/$d" "$ROOT/$d" 2>/dev/null
-    fi
-  done
   ln -sfn "$ROOT/maafw" "$ROOT/agent/maafw"
   log "已回滚；当前版本 $(cur_version)"
 }
@@ -186,10 +179,6 @@ mkdir -p "$DEST/agent"
 mv "$ROOT/agent/go-service" "$DEST/agent/" 2>/dev/null
 mv "$ROOT/agent/cpp-algo"   "$DEST/agent/" 2>/dev/null
 [ -d "$ROOT/maafw" ] && mv "$ROOT/maafw" "$DEST/maafw"
-# 平台层 / 语言包也备份一份（都很小，几 MB）
-for d in locales resource_linux resource_adb resource_cloud_adb resource_macos resource_playcover; do
-  [ -e "$ROOT/$d" ] && cp -a "$ROOT/$d" "$DEST/$d" 2>/dev/null
-done
 log "已备份到 $DEST"
 
 # 3) 下载 + 解包
@@ -226,19 +215,47 @@ if [ -f "$SRC/agent/go-service" ]; then
   chmod +x "$ROOT/agent/go-service" "$ROOT/agent/cpp-algo" 2>/dev/null
 fi
 [ -d "$SRC/maafw" ] && cp -a "$SRC/maafw" "$ROOT/maafw"
-# 平台层与语言包：MXU 用 Linux 控制器会自动追加 resource_linux —— 版本不一致时
-# PipelineChecker 整包校验失败（悬空 next），而且会连带后面所有覆盖层 load 失败；
-# locales 落后则新任务名显示成 task.Xxx.label 原始键。
-for d in locales resource_linux resource_adb resource_cloud_adb resource_macos resource_playcover; do
-  if [ -e "$SRC/$d" ]; then
-    rm -rf "$ROOT/$d"
-    cp -a "$SRC/$d" "$ROOT/$d" || { log "拷贝 $d 失败"; rollback; rm -rf "$TMP"; exit 0; }
-    log "已同步 $d"
-  fi
-done
 ln -sfn "$ROOT/maafw" "$ROOT/agent/maafw"
 rm -rf "$TMP"
 log "已替换为 $TAG"
+# 补丁（cpp-algo 必须停在 1.0856 版）：11-02 23:53 的包自带 compute_view_units_per_degree，
+# 在 1280x720 云网页端算出 7.93 units/度，而 10-27 三档实测是 3.86 —— 2 倍超调会让导航永不收敛。
+WANT_MD5=4056272952b61fe10a9e0a0e7484bbf5
+GOT_MD5=$(md5sum "$ROOT/agent/cpp-algo" 2>/dev/null | cut -d' ' -f1)
+if [ "$GOT_MD5" != "$WANT_MD5" ]; then
+  PATCH_BIN="$ROOT/patches/agent/cpp-algo-1.0856.bin"
+  [ -f "$PATCH_BIN" ] || PATCH_BIN="$ROOT/agent/cpp-algo.bak-20261027-162613"
+  if [ -f "$PATCH_BIN" ]; then
+    cp -a "$ROOT/agent/cpp-algo" "$ROOT/agent/cpp-algo.bak-auto-$(date +%Y%m%d-%H%M)"
+    cp -a "$PATCH_BIN" "$ROOT/agent/cpp-algo"
+    chmod +x "$ROOT/agent/cpp-algo"
+    log "补丁：cpp-algo 已换回 1.0856 版（3.86 units/度），被换掉的 md5=$GOT_MD5"
+  else
+    log "补丁：cpp-algo 需要回退但找不到 1.0856 备份，跳过"
+  fi
+else
+  log "补丁：cpp-algo md5 已是 1.0856 版"
+fi
+
+# 补丁（上游 470d64432，等发版包自带 160 后可删）：AutoStockpileSelectMarket 的 pre_wait_freezes 80→160
+python3 - "$ROOT/resource/pipeline/nodes.json" >>"$LOG" 2>&1 <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p, encoding="utf-8").read()
+k = '"AutoStockpileSelectMarket": {'
+if k in s:
+    i = s.index(k)
+    seg = s[i:i + 900]
+    if '"pre_wait_freezes": 80' in seg:
+        s = s[:i] + seg.replace('"pre_wait_freezes": 80', '"pre_wait_freezes": 160', 1) + s[i + 900:]
+        open(p, "w", encoding="utf-8").write(s)
+        print("[补丁] AutoStockpileSelectMarket pre_wait_freezes 80->160 已应用")
+    else:
+        print("[补丁] 跳过（当前不是 80）")
+else:
+    print("[补丁] 跳过（找不到节点）")
+PYEOF
+
 
 # 5) 自检：15 个关键节点必须都在（覆盖层 + base）
 if [ -f "$CHECK_PY" ]; then

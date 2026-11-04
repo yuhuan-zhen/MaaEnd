@@ -31,20 +31,18 @@ SRC = os.path.normpath(os.path.join(HERE, "..", "resource_web"))
 STARTUP = {
     "WebStartGameEntry", "WebAlreadyInGame", "WebLauncherStartButton", "WebQueueDetected",
     "WebWaitInGame", "WebTitleContinue", "WebSessionBusy", "WebMonthlyCard",
-    "WebTitleClickToContinue",
 }
 
 # 挡屏：网页特有的遮罩/弹窗 —— 抹平注入 + launcher 处理
 BLOCKER = {
-    "WebCloseRewards", "WebAnyExitEsc", "__ScenePrivateCloudBackPill",
-    "__ScenePrivateCloudClickToContinue", "WebCloseProtocolPass",
+    "WebCloseRewards", "WebAnyExitEsc", "WebCloseProtocolPass",
 }
 
 # 结构覆盖：改 next 链或识别类型，上游一改就冲突
+# SceneAnyEnterWorld 的 WebCloseProtocolPass 插入已于 2026-10-21 撤回，不再列入。
 STRUCTURAL = {
     "__ScenePrivateAnyExit",              # recognition → DirectHit（ESC 一步退出）
     "__ScenePrivateWorldEnterMenuList",   # next 去掉 __SceneImageCheck
-    "SceneAnyEnterWorld",                 # next 插入关闭通行证全屏页
 }
 
 LAYERS = {

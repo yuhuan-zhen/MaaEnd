@@ -1,0 +1,31 @@
+### hmuddz8
+[14:50:19]   (为 relative_move/scroll 预加载控制单元，重新 exec)
+[14:50:19] 待跑 11 项: WebStartGame/VisitFriends/DijiangRewards/CreditShoppingN2/DeliveryJobs/AutoStockpile/AutoSell/AutoStockStaple/SellProduct/DailyRewards/AutoEssence
+[14:50:19]    1. WebStartGame           -> WebStartGameEntry                覆盖 0 项
+[14:50:19]    2. VisitFriends           -> VisitFriendsMain                 覆盖 15 项
+[14:50:19]    3. DijiangRewards         -> DijiangRewards                   覆盖 25 项
+[14:50:19]    4. CreditShoppingN2       -> CreditShoppingMain               覆盖 37 项
+[14:50:19]    5. DeliveryJobs           -> DeliveryJobsMain                 覆盖 19 项
+[14:50:19]    6. AutoStockpile          -> AutoStockpileMain                覆盖 5 项
+[14:50:19]    7. AutoSell               -> AutoSellMain                     覆盖 6 项
+[14:50:19]    8. AutoStockStaple        -> AutoStockStapleSchedule          覆盖 107 项
+[14:50:19]    9. SellProduct            -> OutpostTradingSchedule           覆盖 17 项
+[14:50:19]   10. DailyRewards           -> DailyRewardStart                 覆盖 15 项
+[14:50:19]   11. AutoEssence            -> AutoEssenceSchedule              覆盖 21 项
+### hyasuml
+[14:50:19]   (为 relative_move/scroll 预加载控制单元，重新 exec)
+[14:50:19] 待跑 14 项: WebStartGame/VisitFriends/DijiangRewards/CreditShoppingN2/DeliveryJobs/SellProduct/AutoStockpile/AutoStockStaple/AutoSell/EnvironmentMonitoring/DailyRewards/SeizeDeliveryJobs/ProtocolSpace/AutoCollect
+[14:50:19]    1. WebStartGame           -> WebStartGameEntry                覆盖 0 项
+[14:50:19]    2. VisitFriends           -> VisitFriendsMain                 覆盖 15 项
+[14:50:19]    3. DijiangRewards         -> DijiangRewards                   覆盖 25 项
+[14:50:19]    4. CreditShoppingN2       -> CreditShoppingMain               覆盖 38 项
+[14:50:19]    5. DeliveryJobs           -> DeliveryJobsMain                 覆盖 19 项
+[14:50:19]    6. SellProduct            -> OutpostTradingSchedule           覆盖 17 项
+[14:50:19]    7. AutoStockpile          -> AutoStockpileMain                覆盖 5 项
+[14:50:19]    8. AutoStockStaple        -> AutoStockStapleSchedule          覆盖 104 项
+[14:50:19]    9. AutoSell               -> AutoSellMain                     覆盖 6 项
+[14:50:19]   10. EnvironmentMonitoring  -> EnvironmentMonitoringMain        覆盖 0 项
+[14:50:19]   11. DailyRewards           -> DailyRewardStart                 覆盖 10 项
+[14:50:19]   12. SeizeDeliveryJobs      -> SeizeDeliveryJobsCheckOngoingJob 覆盖 8 项
+[14:50:19]   13. ProtocolSpace          -> ProtocolSpaceSchedule            覆盖 21 项
+[14:50:19]   14. AutoCollect            -> AutoCollectSchedule              覆盖 87 项

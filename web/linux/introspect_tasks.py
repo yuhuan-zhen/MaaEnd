@@ -1,37 +1,28 @@
-"""从 MaaEnd 发行版里解出「任务名 -> entry + 默认选项覆盖」。
+"""兼容层：JSONC 解析在 :mod:`maaend_web.jsonc`。
 
-为什么需要它：MXU 在提交任务时会把用户选的选项解析成 pipeline_override；
-Linux 上没有 GUI，只能自己按 interface.json 的 option/cases 复现这一步。
+``python3 introspect_tasks.py [root]`` 仍可打印发行版里的任务/选项清单。
 """
 
 from __future__ import annotations
 
 import glob
-import json
 import os
-import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def load_jsonc(path):
-    s = open(path, "rb").read().decode("utf-8-sig")
-    try:
-        return json.loads(s)
-    except json.JSONDecodeError:
-        pass
-    # 去块注释 -> 再去行首/行尾 // 注释
-    s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
-    s = re.sub(r"(?m)^\s*//.*$", "", s)
-    s = re.sub(r'(?m)([^:"])\s*//[^"\n]*$', r"\1", s)
-    s = re.sub(r",(\s*[}\]])", r"\1", s)
-    return json.loads(s)
+from maaend_web.jsonc import load_jsonc
+
+__all__ = ["load_jsonc", "main"]
 
 
-def main():
-    root = sys.argv[1] if len(sys.argv) > 1 else r"D:\jiaoben\MaaEnd-win-x86_64-v2.3.0"
+def main(argv: list[str] | None = None) -> int:
+    """打印 ``interface.json`` 导入的任务与选项默认值（调试用）。"""
+    args = list(sys.argv[1:] if argv is None else argv)
+    root = args[0] if args else os.environ.get("MAAEND_ROOT", os.path.expanduser("~/maaend"))
     iface = load_jsonc(os.path.join(root, "interface.json"))
 
-    files = []
+    files: list[str] = []
     for pat in iface.get("import") or []:
         p = pat.replace("\\", "/")
         if not os.path.isabs(p):
@@ -43,7 +34,7 @@ def main():
         try:
             d = load_jsonc(f)
         except Exception as e:
-            print("  ! %s 解析失败: %s" % (os.path.basename(f), e))
+            print(f"  ! {os.path.basename(f)} 解析失败: {e}")
             continue
         for k in ("task", "tasks"):
             if isinstance(d.get(k), list):
@@ -51,13 +42,13 @@ def main():
         if isinstance(d.get("option"), dict):
             options.update(d["option"])
 
-    print("任务数 %d   选项组 %d   （来源 %d 个文件）" % (len(tasks), len(options), len(files)))
+    print(f"任务数 {len(tasks)}   选项组 {len(options)}   （来源 {len(files)} 个文件）")
     print()
-    print("%-3s %-24s %-34s %s" % ("#", "任务名", "entry", "选项"))
+    print(f"{'#':<3} {'任务名':<24} {'entry':<34} 选项")
     for i, t in enumerate(tasks, 1):
-        print("%-3d %-24s %-34s %s" % (i, t.get("name"), t.get("entry"), ",".join(t.get("option") or []) or "-"))
+        opts = ",".join(t.get("option") or []) or "-"
+        print(f"{i:<3} {t.get('name')!s:<24} {t.get('entry')!s:<34} {opts}")
 
-    # 解析每个选项的默认 case
     print("\n=== 选项默认值 ===")
     for key, o in options.items():
         cases = o.get("cases") or []
@@ -65,8 +56,9 @@ def main():
         dflt = o.get("default_case") or o.get("default")
         if dflt is None and cases:
             dflt = cases[0].get("name")
-        print("  %-30s default=%-16s cases=%s" % (key, str(dflt), names))
+        print(f"  {key:<30} default={dflt!s:<16} cases={names}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
