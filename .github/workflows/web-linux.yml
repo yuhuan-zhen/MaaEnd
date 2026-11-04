@@ -1,0 +1,160 @@
+name: web-linux
+
+# 网页端运行层（web/ + assets/resource_cloud_web/）的独立检查。
+# 只跑静态检查与离线单测：不连真实游戏、不装 MaaFramework、不需要图形会话，
+# 因此任何 ubuntu-latest runner 都能跑完。
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "web/**"
+      - "assets/resource_cloud_web/**"
+      - ".github/workflows/web-linux.yml"
+
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "web/**"
+      - "assets/resource_cloud_web/**"
+      - ".github/workflows/web-linux.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 同一 PR / 分支再次推送时取消上一次运行，旧提交的验证不必跑完
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      # ruff 版本由根 pyproject.toml 的 dev 组固定，setup-uv 负责按 uv.lock 装配
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+          cache-python: true
+
+      # web/pyproject.toml 用 extend 继承根配置，规则只有一份
+      - name: Run ruff
+        run: uv run ruff check web/linux
+
+  unittest:
+    name: unittest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      # 单测只依赖标准库。用 --isolated --no-project 强制干净环境：
+      # 仓库 .venv 里装着 maafw，「import core 不拉 maa」那条用例在装了框架的环境里验不出来。
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          cache-python: true
+
+      - name: Run unittest
+        run: uv run --isolated --no-project python -m unittest discover -s web/linux/tests -v
+
+  node-test:
+    name: node test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      # 页面状态机与输入策略的 JS 测试，与 Python 侧共用 page_js.py 里的同一份源码
+      - name: Run node test
+        run: node --test web/linux/tests/*.test.mjs
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      # -x 跟随 `source lib.sh`，把公共层一起检查
+      - name: Run shellcheck
+        run: shellcheck -x web/linux/homesrv/*.sh
+
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 跳过项只有两类：
+      #   1. 历史留档目录（refactor-20261104/），当时没按 markdownlint 写，改动会污染历史 diff；
+      #   2. devtools/wsl/README.md：WSL 调试环境的整页改造随 devtools 一起做，改完删掉这条 ignore。
+      - name: Run markdownlint
+        run: |
+          pnpm exec markdownlint "web/**/*.md" \
+            --ignore "web/docs/refactor-20261104/**"
+
+  prettier:
+    name: prettier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          show-progress: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Markdown 交给 markdownlint，Prettier 只管 web/ 下的 JSON。
+      # .prettierrc.mjs 的 maafw 插件会按 pipeline / interface 两套语义排序键，因此这里不传 --write。
+      - name: Run prettier check
+        run: pnpm exec prettier --check "web/**/*.json"

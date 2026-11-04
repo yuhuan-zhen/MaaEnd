@@ -1,0 +1,21 @@
+# web/ 的 lint 配置：只服务 ruff，不定义 [project]。
+#
+# web/ 不是可安装的包——生产部署是把仓库 checkout 到 ~/maaend 后直接跑脚本，
+# 所以这里没有构建后端、没有依赖声明，`uv run ruff` 也照常从仓库根的项目环境里取。
+#
+# 规则基线只有一份，在仓库根的 pyproject.toml（`target-version = "py314"`、
+# 120 列、`select = [B, C4, E4, E7, E9, F, I, RUF, SIM, UP, W]`）。
+# 本文件用 `extend` 继承它，只追加 web/ 自己的两条豁免，不重复抄一份 select。
+
+[tool.ruff]
+extend = "../pyproject.toml"
+
+[tool.ruff.lint]
+extend-ignore = [
+    # printf 风格格式化：这里绝大多数是 `log('... %s' % (a, b))` 形式的日志行，
+    # 改成 f-string 纯属噪音，且这些行会随诊断需要频繁改动。
+    "UP031",
+    # 文件句柄不放在 with 里：agent 日志句柄要交给 subprocess.Popen 长期持有，
+    # 用 with 会在 Popen 返回后立刻关闭。
+    "SIM115",
+]

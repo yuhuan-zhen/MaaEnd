@@ -8,7 +8,7 @@
 
 ## `__ScenePrivateWorldEnterMenuList`
 
-【网页端覆盖 · 云串流适配】从大世界进入菜单总列表。上游 next 是 [__SceneImageCheck, __ScenePrivateAnyEnterMenuListSuccess]：前者会点左下角，期待弹出「登录界面/确认」登出对话框，再借那张对话框做 OSD/Mod/画面颜色/语言/抓 UID 五项 PC 渲染自检。云端实测（2026-10-17 15:31~15:33 日志）：点击后画面回到大世界、登出对话框从未出现 ⇒ __SceneImageCheckDialogIn 在 20 秒内空转 5640 次全部落空 ⇒ 任务失败。这五项自检对浏览器/云串流无意义：OSD 遮挡与 Mod 检测针对 PC 客户端；CaptureUid 在 Win32 控制器下读游戏注册表，而浏览器无该注册表项。故这里只保留「Alt+点开菜单」与「确认已在菜单列表」两步，去掉整条自检链。ImageCheckNotPassedRecognition 仅被 __SceneImageCheck 使用（已核），跳过不影响其他节点。
+【网页端覆盖 · 云串流适配】从大世界进入菜单总列表。上游 next 是 [`__SceneImageCheck`, `__ScenePrivateAnyEnterMenuListSuccess`]：前者会点左下角，期待弹出「登录界面/确认」登出对话框，再借那张对话框做 OSD/Mod/画面颜色/语言/抓 UID 五项 PC 渲染自检。云端实测（2026-10-17 15:31~15:33 日志）：点击后画面回到大世界、登出对话框从未出现 ⇒ `__SceneImageCheckDialogIn` 在 20 秒内空转 5640 次全部落空 ⇒ 任务失败。这五项自检对浏览器/云串流无意义：OSD 遮挡与 Mod 检测针对 PC 客户端；CaptureUid 在 Win32 控制器下读游戏注册表，而浏览器无该注册表项。故这里只保留「Alt+点开菜单」与「确认已在菜单列表」两步，去掉整条自检链。ImageCheckNotPassedRecognition 仅被 `__SceneImageCheck` 使用（已核），跳过不影响其他节点。
 
 ## `WebStartGameEntry`
 
@@ -20,7 +20,7 @@
 
 ## `WebTitleContinue`
 
-【网页端 · 启动器】标题页「点击任意位置继续」。模式照上游 __ScenePrivateLoginContinue：OCR 固定 ROI → 点击 → next 自引用来循环（max_hit 10 防止无限连点）；点完直接等「进游戏」或下一次标题页，不依赖 inverse 字段（该字段只在 next 列表求值生效，离线验证不到）。云端实测命中 0.999974。
+【网页端 · 启动器】标题页「点击任意位置继续」。模式照上游 `__ScenePrivateLoginContinue`：OCR 固定 ROI → 点击 → next 自引用来循环（max_hit 10 防止无限连点）；点完直接等「进游戏」或下一次标题页，不依赖 inverse 字段（该字段只在 next 列表求值生效，离线验证不到）。云端实测命中 0.999974。
 
 ## `WebSessionBusy`
 
@@ -49,4 +49,3 @@
 ## `WebLaunchBrowserStart`
 
 【网页端 · 启动器】拉起 sway + Chrome（调 start_web.sh；已在跑会秒退）。参数名在 Linux 控制器上待实测：command / path
-

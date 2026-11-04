@@ -1,0 +1,184 @@
+节点级对照（sa-1「资源层重组」，2026-11-04）
+====================================================================================================
+官方基线：D:\maaend-official @ ba5887d64  assets/resource_cloud = 14 文件 / 27 节点（JSONC，全部带 // 注释）
+迁移前我们：web/resource_web/pipeline/nodes.json 32 节点 + web/resource_web_homesrv/pipeline/nodes.json 5 节点
+            WebLauncherStartButton 两层各有一份（homesrv 层在生产里更靠后 ⇒ 生效的是 OCR 版），去重后 36
+迁移后：assets/resource_cloud_web = 12 文件 / 23 节点；assets/resource_cloud = 15 文件 / 30 节点
+
+判定口径：① 与官方云层同名【且逐键相同】⇒ 删；② 同名有差异 ⇒ 保留并写明差异；
+          ③ 官方云层没有的（网页端独有 / 覆盖 base）⇒ 逐个判定「云版 UI 差异 / 本地修复 / 应回上游」。
+
+统计：36 = 删除 13 + 保留 23（覆盖 base 10 + 网页端独有 13）；其中 6 个标 upstream-candidate
+
+A. 与官方 resource_cloud 同名（13）—— 逐键完全相同 ⇒ 全部删除
+----------------------------------------------------------------------------------------------------
+节点                                                                 官方文件                                                 判定
+AutoStockInStapleItem                                              pipeline/AutoStockStaple/General/Item.json           删除
+CanAfford                                                          pipeline/CreditShopping/Item.json                    删除
+DailyEventRecognitionRedDot                                        pipeline/DailyRewards/Event.json                     删除
+DailyEventUnreadChallengeEventColor                                pipeline/DailyRewards/Event/TitleYellow.json         删除
+DailyEventUnreadGiftEventColor                                     pipeline/DailyRewards/Event/TitleYellow.json         删除
+DailyEventUnreadGuideEventColor                                    pipeline/DailyRewards/Event/TitleYellow.json         删除
+DailyEventUnreadLimitedTimeEventColor                              pipeline/DailyRewards/Event/TitleYellow.json         删除
+DailyEventUnreadLimitedTimeSigninColor                             pipeline/DailyRewards/Event/TitleYellow.json         删除
+DailyEventUnreadSpaceExplorationEventColor                         pipeline/DailyRewards/Event/TitleYellow.json         删除
+DailyEventUnreadWeeklyRoutineColor                                 pipeline/DailyRewards/Event/TitleYellow.json         删除
+OutpostTradingZeroProductColorMatch                                pipeline/OutpostTrading/SellCore.json                删除
+YellowButtonBackground                                             pipeline/Common/Button/ButtonColor.json              删除
+__AutoUseSpMedicationColorRecognitionEmergencySanityBoosterDeadline pipeline/Common/Private/AutoUseSpMedication/Recognition.json 删除
+
+依据：这 13 个连 desc / partial-patch 形态都与官方一致（官方云层是「只写差异字段」的覆盖层，
+      我们当初照抄了一份）。把 assets/resource_cloud 重建为官方基线后，云层自己就会提供同值；
+      已用「按框架 patch 语义模拟加载」验证：删除前后 13 个节点的生效值 13/13 一致。
+      前置条件：运行时资源链必须包含 resource_cloud（见交付报告 sync_requests）。
+
+B. 官方云层没有、我们独有（13）—— 全部保留
+----------------------------------------------------------------------------------------------------
+AutoEssenceCapacityCursorPark                                      pipeline/AutoEssence/CommonNodes/Capacity.json       保留
+    └ 网页端独有：云串流把鼠标指针画进画面，需挪开（homesrv 层）
+EssenceFilterCursorPark                                            pipeline/EssenceFilter/Tab.json                      保留
+    └ 网页端独有：同上（homesrv 层）
+WebAlreadyInGame                                                   pipeline/SceneManager/SceneLogin.json                保留
+    └ 网页端独有：启动链命中终点（recovery.py 直接按名调用）
+WebAnyExitEsc                                                      pipeline/SceneManager/Exit.json                      保留
+    └ 网页端独有：ESC 兜底。**当前无任何引用**（原 resource_web_structural 的插入已删）→ 遗留项
+WebCloseProtocolPass                                               pipeline/SceneManager/Exit.json                      保留
+    └ 网页端独有：通行证全屏页。**当前无任何引用**（SceneAnyEnterWorld 里的插入 2026-10-21 撤回）→ 遗留项
+WebCloseRewards                                                    pipeline/Common/Button/Rewards.json                  保留
+    └ 网页端独有：领奖结算弹窗；recovery.py RESUME_CHAIN 按名调用
+WebLauncherStartButton                                             pipeline/SceneManager/SceneLogin.json                保留
+    └ 网页端独有：「开始游戏」。两层各有一份（TemplateMatch / homesrv 的 OCR），合并后保留生产实际生效的 OCR 版
+WebMonthlyCard                                                     pipeline/SceneManager/SceneLoginDialog.json          保留
+    └ 网页端独有：每日月卡面板
+WebQueueDetected                                                   pipeline/SceneManager/SceneLogin.json                保留
+    └ 网页端独有：云排队页
+WebSessionBusy                                                     pipeline/SceneManager/SceneLoginDialog.json          保留
+    └ 网页端独有：上次会话未收尾弹窗（sa-4 已补 max_hit 5）
+WebStartGameEntry                                                  pipeline/SceneManager/SceneLogin.json                保留
+    └ 网页端独有：浏览器落地页入口（base/云层都没有）
+WebTitleContinue                                                   pipeline/SceneManager/SceneLoginDialog.json          保留
+    └ 网页端独有：标题页「点击任意位置继续」
+WebWaitInGame                                                      pipeline/SceneManager/SceneLogin.json                保留
+    └ 网页端独有：排队/加载结束判据
+
+C. 覆盖 base（10）—— 逐个判定
+----------------------------------------------------------------------------------------------------
+AutoEssenceCapacitySwitchToWeaponTab                               base: AutoEssence/CommonNodes/Capacity.json
+    -> pipeline/AutoEssence/CommonNodes/Capacity.json
+    └ 网页端指针遮挡：next 改走 CursorPark（云串流画指针，OnWeaponTab 只有 0.867）
+AutoStockpileGotoElasticGoods                                      base: AutoStockpile/Entry.json
+    -> pipeline/AutoStockpile/Entry.json
+    └ 云版延迟：post_delay 0→800。**upstream-candidate**
+CheckMenuListColor                                                 base: Interface/InScene/Region.json
+    -> pipeline/Interface/InScene/Region.json
+    └ 云版 UI 差异：upper.S 83→130（画面饱和度被拉伸，23/17 像素→168/152）。**upstream-candidate**（属云层颜色适配）
+EssenceFilterSwitchTab                                             base: EssenceFilter.json
+    -> pipeline/EssenceFilter/Tab.json
+    └ 网页端指针遮挡：next 改走 CursorPark + rate_limit 0
+ItemTransferRepoSwitchButton                                       base: ItemTransfer.json
+    -> pipeline/ItemTransfer/Repo.json
+    └ 云版 UI 差异：OCR ROI [607,128,65,24] → [170,118,150,36]（标题在左上角）。**upstream-candidate**
+__ScenePrivateAnyExit                                              base: SceneManager/SceneCommon.json
+    -> pipeline/SceneManager/Exit.json
+    └ 本地修复：ESC 保留，max_hit 100→6、post_delay 3000→600（原值在认不出的页面上空转 300 秒）。网页端时序，不建议回上游
+__ScenePrivateEndVisit                                             base: SceneManager/SceneWorld.json
+    -> pipeline/SceneManager/SceneWorld.json
+    └ 云版 UI 差异：OCR ROI [-260,-100,260,100] → [600,300,680,400]（云版提示在画面中部）。**upstream-candidate**
+__ScenePrivateMapTeleportConfirm                                   base: SceneManager/SceneMap.json
+    -> pipeline/SceneManager/SceneMap.json
+    └ 云版 UI 差异：recognize And→TemplateMatch（云版无确认框，右下角「传送」胶囊）。**upstream-candidate**
+__ScenePrivateMapTeleportSuccess                                   base: SceneManager/SceneMap.json
+    -> pipeline/SceneManager/SceneMap.json
+    └ 云版判据：WorldMenu.png(0.193) → And(InWorld)。**upstream-candidate**
+__ScenePrivateWorldEnterMenuList                                   base: SceneManager/SceneMenu.json
+    -> pipeline/SceneManager/SceneMenu.json
+    └ 浏览器结构差异：next 去掉 __SceneImageCheck 的 PC 五项自检（无 OSD/Mod/注册表）。不能回上游（PC 端需要）
+
+D. 覆盖节点与 base 的字段差异（只列改动的键）
+----------------------------------------------------------------------------------------------------
+AutoEssenceCapacitySwitchToWeaponTab
+    next: ["AutoEssenceCapacityOnWeaponTab"] -> ["AutoEssenceCapacityCursorPark"]
+AutoStockpileGotoElasticGoods
+    post_delay: 0 -> 800
+CheckMenuListColor
+    upper: [191, 83, 85] -> [191, 130, 85]
+EssenceFilterSwitchTab
+    next: ["EssenceFilterCheckInInventory"] -> ["EssenceFilterCursorPark"]
+    rate_limit: null -> 0
+ItemTransferRepoSwitchButton
+    post_delay: null -> 0
+    pre_delay: null -> 0
+    rate_limit: null -> 0
+    roi: [607, 128, 65, 24] -> [170, 118, 150, 36]
+__ScenePrivateAnyExit
+    max_hit: 100 -> 6
+    post_delay: 3000 -> 600
+    recognition: null -> "DirectHit"
+__ScenePrivateEndVisit
+    action: {"type": "Custom", "param": {"custom_action": "RepeatUntilFoundAction", "custom_action_par -> null
+    next: ["__ScenePrivateWorldSpaceExitConfirm"] -> null
+    recognition: {"type": "OCR", "param": {"roi": [-260, -100, 260, 100], "expected": ["结束拜访", "結束拜訪", "(?i -> {"type": "OCR", "param": {"roi": [600, 300, 680, 400], "expected": ["结束拜访", "結束拜訪", "(?i)E
+__ScenePrivateMapTeleportConfirm
+    action: {"type": "Click"} -> null
+    next: ["[JumpBack]SceneWaitLoadingExit", "[JumpBack]__ScenePrivateMapTeleportTutorialConfirm", " -> null
+    pre_wait_freezes: {"time": 100, "target": [-100, -300, 100, 300]} -> null
+    recognition: {"type": "And", "param": {"all_of": ["TeleportButton"]}} -> {"type": "TemplateMatch", "param": {"roi": [1050, 620, 230, 100], "template": ["WebTelepor
+__ScenePrivateMapTeleportSuccess
+    post_delay: 0 -> null
+    pre_delay: 0 -> null
+    pre_wait_freezes: {"time": 800, "target": [70, 80, 70, 60], "timeout": 2000} -> null
+    recognition: {"type": "TemplateMatch", "param": {"roi": [-200, 0, 200, 200], "template": ["SceneManager -> {"type": "And", "param": {"all_of": ["InWorld"]}}
+__ScenePrivateWorldEnterMenuList
+    next: ["__SceneImageCheck", "__ScenePrivateAnyEnterMenuListSuccess"] -> ["__ScenePrivateAnyEnterMenuListSuccess"]
+
+E. assets/resource_cloud 重建明细（官方 27 + fork 3 = 30）
+----------------------------------------------------------------------------------------------------
+官方 27 节点（逐键照官方，未改动）：
+    AutoEssenceCapacityClickSave                                       pipeline/AutoEssence/CommonNodes/Capacity.json
+    AutoEssenceCapacitySaveClosed                                      pipeline/AutoEssence/CommonNodes/Capacity.json
+    AutoSellFriendsPriceCurrentAreaRecognition                         pipeline/AutoSell/Recognition.json
+    AutoSellFriendsPricesExpectedGoToHighlightRecognition              pipeline/AutoSell/Recognition.json
+    AutoStockInStapleItem                                              pipeline/AutoStockStaple/General/Item.json
+    CanAfford                                                          pipeline/CreditShopping/Item.json
+    DailyEventRecognitionRedDot                                        pipeline/DailyRewards/Event.json
+    DailyEventUnreadChallengeEventColor                                pipeline/DailyRewards/Event/TitleYellow.json
+    DailyEventUnreadGiftEventColor                                     pipeline/DailyRewards/Event/TitleYellow.json
+    DailyEventUnreadGuideEventColor                                    pipeline/DailyRewards/Event/TitleYellow.json
+    DailyEventUnreadLimitedTimeEventColor                              pipeline/DailyRewards/Event/TitleYellow.json
+    DailyEventUnreadLimitedTimeSigninColor                             pipeline/DailyRewards/Event/TitleYellow.json
+    DailyEventUnreadSpaceExplorationEventColor                         pipeline/DailyRewards/Event/TitleYellow.json
+    DailyEventUnreadWeeklyRoutineColor                                 pipeline/DailyRewards/Event/TitleYellow.json
+    EnvironmentMonitoringMarkerStoneMonitoringTerminalSelected         pipeline/Interface/InScene/EnvironmentMonitoring.json
+    EnvironmentMonitoringOutskirtsMonitoringTerminalSelected           pipeline/Interface/InScene/EnvironmentMonitoring.json
+    GiftOperatorCheckSelectedLabelColor                                pipeline/GiftOperator/GiftOperatorContact.json
+    GiftOperatorCheckSelectedTextColor                                 pipeline/GiftOperator/GiftOperatorContact.json
+    GiftOperatorClickGiftColor                                         pipeline/GiftOperator/GiftOperatorGiftFlow.json
+    GiftOperatorNotSelect                                              pipeline/GiftOperator/GiftOperatorContact.json
+    GrayButtonBackground                                               pipeline/Common/Button/ButtonColor.json
+    OutpostTradingZeroProductColorMatch                                pipeline/OutpostTrading/SellCore.json
+    VisitFriendsMenuScanDetailClose                                    pipeline/VisitFriends/MenuScan.json
+    WhiteButtonBackground                                              pipeline/Common/Button/ButtonColor.json
+    YellowButtonBackground                                             pipeline/Common/Button/ButtonColor.json
+    __AutoUseSpMedicationColorRecognitionEmergencySanityBoosterDeadline pipeline/Common/Private/AutoUseSpMedication/Recognition.json
+    __ScenePrivateLogin                                                pipeline/SceneManager/SceneLogin.json
+
+fork 自有 3 节点（官方 ba5887d64 未采纳，保留并注明来源）：
+    __ScenePrivateAnyExit                                              pipeline/SceneManager/SceneCommon.json
+    __ScenePrivateCloudBackPill                                        pipeline/SceneManager/SceneCommon.json
+    __ScenePrivateCloudClickToContinue                                 pipeline/SceneManager/SceneCommon.json
+    依据：云终末地不接受 BACK 键（ADB 把 ESC 重映射成 key=4），官方云层仍用 base 的 ESC 版；
+          这 3 个是 fork 为 CloudADB 补的触摸退出链，网页端由 resource_cloud_web/SceneManager/Exit.json 覆盖。
+
+旧快照里被丢弃的 6 项（官方无 / 官方更优）：
+    CloseButtonDijiang                                                 孤儿：base 无同名节点、全仓无引用（base 用 CancelExit 退出帝江号）
+    GrowthChamberBackExtract                                           孤儿：同上
+    SeizeDeliveryJobsPressEscAfterMatch                                官方未采纳的 ESC→Click patch；网页端有键盘，保留 base 的 ESC
+    SeizeDeliveryJobsPressEscAfterNotMatch                             同上
+    __ScenePrivateLoginCloseDialog                                     官方未采纳的 ESC→(1,1) 点击 patch；官方 base / 网页端的 ESC 可用
+    WhiteButtonBackground                                              官方版色带是本地版的超集（lower[0] 253 vs 255、upper[0] 255 vs 253），以官方为准
+
+F. 节点总数核对
+----------------------------------------------------------------------------------------------------
+迁移前 36（去重） = 删除 13 + 保留 23
+assets/resource_cloud_web: 23 节点 / 12 文件
+assets/resource_cloud:     30 节点 / 15 文件

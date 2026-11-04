@@ -25,7 +25,7 @@
 homesrv 全部 `maafw*.log` 里各节点出现次数：
 
 | 节点 | 次数 | 含义 |
-|---|---|---|
+| --- | --- | --- |
 | `AcceptHangingVines` | 90 | 接任务：执行过 |
 | `GoToHangingVinesMission` | 210 | 前往任务点：执行过 |
 | `EnvironmentMonitoringEnterCameraMode` | **0** | 进入拍照模式：**从未执行** |
@@ -35,7 +35,7 @@ homesrv 全部 `maafw*.log` 里各节点出现次数：
 
 路线链（以垂藤为例）：
 
-```
+```text
 HangingVinesExecute → AcceptHangingVines → GoToHangingVinesMission
   → TrackOrGoTo → Track/AlreadyTracked → GoToHangingVines
   → StartPos/NotAtStartPos → GoToHangingVinesMove
@@ -60,6 +60,7 @@ MAA_SAVE_DRAW=1 python3 run_daily_linux.py --tasks EnvironmentMonitoring --insta
 ```
 
 然后看：
+
 1. `<log_dir>/vision/` 里失败节点的识别框；
 2. 日志里 `failure_task` 触发了哪条路线（`HangingVinesFailed` / `XiraniteNexusFailed` /
    `MiniShellbeastFailed` / `TreeOfTheOldCourtyardFailed` / `Outskirts…` / `MarkerStone…`）；
@@ -75,7 +76,7 @@ MAA_SAVE_DRAW=1 python3 run_daily_linux.py --tasks EnvironmentMonitoring --insta
 同样预设、同一台机器，仅把控制器从 `cdp` 换回 `wlroots`（合成器帧），环境监测**照样失败**：
 
 | 控制器 | 结果 | `XiraniteNexusInQuickTeleportMap` | `__CameraScanMove*` |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | cdp | FAIL（163.5s，含重试） | 832 次 / 412 失败（49.5%） | 0 |
 | wlroots | FAIL（177.2s + 83.1s） | 516 次 / 250 失败（48.4%） | 0 |
 
