@@ -27,7 +27,7 @@ core/           maaend_web/*.py   —— 纯逻辑，不 import maa，可离线�
 | `maaend_web/overlay.py` | 浮层策略：悬浮球 + 延迟角标，注入并自愈 |
 | `page_js.py` | 页面侧 JS 源码（状态判定 + 输入策略），Python 与 node 测试共用 |
 | `homesrv/` | 部署层：cron/夜间链/几何/自动更新/选项基线 |
-| `tools/probes/` | 一次性诊断脚本，不参与生产 |
+| `tools/`（仅部署仓库） | 一次性诊断脚本，不随上游发布；见 `yuhuan-zhen/MaaEnd-web-linux` |
 | `tests/` | Python unittest + node:test |
 
 顶层的 `run_daily_linux.py`、`resolve_preset.py`、`page_state.py`、`cdp_controller.py`、`overlay_ctl.py` 是兼容 shim：生产 cron 与环境变量路径不变，实现已经移进 `maaend_web/`。

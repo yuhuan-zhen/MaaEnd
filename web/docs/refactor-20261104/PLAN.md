@@ -66,7 +66,7 @@ web/linux/
 │   ├── essence_run_homesrv.sh  # 同上
 │   ├── nightly_run_homesrv.sh  # 同上
 │   └── ...                     # 其余脚本保持
-├── tools/                      # 新增：一次性探针归档，README 标注非生产
+├── tools/                      # 仅部署仓库：一次性探针归档，不进上游
 │   └── README.md
 └── tests/
     ├── test_config.py
