@@ -1,0 +1,133 @@
+{
+    "generated_at": "2026-11-04T16:01:46+08:00",
+    "tool": "diagnose_essence.py",
+    "purpose": "迁移前基线（commit b8cda0c66 的 assets/resource_cloud_adb/pipeline）与官方 resource_cloud 的差集快照",
+    "inputs": {
+        "baseline_commit": "b8cda0c66",
+        "baseline_tree": "git archive b8cda0c66 assets/resource_cloud_adb | tar -x -C <tmp>/baseline-tree",
+        "official": "$MAAEND_OFFICIAL",
+        "log": [
+            "$MAAEND_ROOT/essence.log"
+        ]
+    },
+    "freshness": {
+        "code_epoch": "2026-11-04T15:58:51",
+        "log_last_ts": "2026-11-04 04:22:29.330",
+        "log_precedes_code": true
+    },
+    "base_capacity": {
+        "path": "assets/resource/pipeline/AutoEssence/CommonNodes/Capacity.json",
+        "merged": false,
+        "click_save_next": [
+            "AutoEssenceCapacityBatchReady",
+            "AutoEssenceCapacityCannotReach",
+            "AutoEssenceCapacityNothingLeft"
+        ],
+        "post_wait_freezes": {
+            "time": 200,
+            "target": [
+                0,
+                620,
+                250,
+                80
+            ],
+            "timeout": 1000
+        },
+        "has_save_closed": false,
+        "verdict_nodes_present": [
+            "AutoEssenceCapacityBatchReady",
+            "AutoEssenceCapacityCannotReach",
+            "AutoEssenceCapacityNothingLeft"
+        ]
+    },
+    "cloud_layer_diff": {
+        "available": true,
+        "layers": [
+            {
+                "name": "resource_cloud(old-name)",
+                "dir": "<tmp>/baseline-tree/assets/resource_cloud_adb/pipeline"
+            }
+        ],
+        "official_dir": "$MAAEND_OFFICIAL/assets/resource_cloud/pipeline",
+        "file_only_official": [
+            "AutoEssence/CommonNodes/Capacity.json",
+            "AutoSell/Recognition.json",
+            "GiftOperator/GiftOperatorContact.json",
+            "GiftOperator/GiftOperatorGiftFlow.json",
+            "Interface/InScene/EnvironmentMonitoring.json"
+        ],
+        "file_only_ours": [
+            "DijiangRewards/GrowthChamber.json",
+            "DijiangRewards/MainFlow.json",
+            "SceneManager/SceneCommon.json",
+            "SeizeDeliveryJobs/SeizeDeliveryJobsEndpointFilter.json"
+        ],
+        "node_only_official": [
+            "AutoEssenceCapacityClickSave",
+            "AutoEssenceCapacitySaveClosed",
+            "AutoSellFriendsPriceCurrentAreaRecognition",
+            "AutoSellFriendsPricesExpectedGoToHighlightRecognition",
+            "EnvironmentMonitoringMarkerStoneMonitoringTerminalSelected",
+            "EnvironmentMonitoringOutskirtsMonitoringTerminalSelected",
+            "GiftOperatorCheckSelectedLabelColor",
+            "GiftOperatorCheckSelectedTextColor",
+            "GiftOperatorClickGiftColor",
+            "GiftOperatorNotSelect"
+        ],
+        "node_only_official_in_subtree": [
+            "AutoEssenceCapacityClickSave",
+            "AutoEssenceCapacitySaveClosed"
+        ],
+        "required_cloud_nodes_absent": [
+            "AutoEssenceCapacityClickSave",
+            "AutoEssenceCapacitySaveClosed"
+        ],
+        "required_cloud_node_layers": {
+            "AutoEssenceCapacityClickSave": [],
+            "AutoEssenceCapacitySaveClosed": []
+        },
+        "field_diffs": [
+            {
+                "file": "Common/Button/ButtonColor.json",
+                "layer": "resource_cloud(old-name)",
+                "nodes": [
+                    "WhiteButtonBackground"
+                ]
+            }
+        ],
+        "cross_layer_conflicts": [],
+        "gate_override_conflicts": []
+    },
+    "verdict": {
+        "static_blocking": [
+            "E-CAP-CLOUD-GATE"
+        ],
+        "warnings": [
+            "E-CLOUD-FIELD-DIFF",
+            "E-STALE-LOG",
+            "E-NAV-FAILED",
+            "E-SILENT-GAP",
+            "E-RECO-TIMEOUT"
+        ],
+        "needs_live_verification": true,
+        "exit_code": 2
+    },
+    "findings": [
+        {
+            "id": "E-CAP-CLOUD-GATE",
+            "severity": "blocking",
+            "evidence_class": "static",
+            "title": "云层缺少官方 AutoEssence 容量门控节点：AutoEssenceCapacityClickSave、AutoEssenceCapacitySaveClosed",
+            "evidence": "官方 $MAAEND_OFFICIAL\\assets\\resource_cloud\\pipeline/AutoEssence/CommonNodes/Capacity.json 的 2 个节点；我们云层（resource_cloud(old-name)）差集为 ['AutoEssenceCapacityClickSave', 'AutoEssenceCapacitySaveClosed']；base 的 AutoEssenceCapacityClickSave.next=[\"AutoEssenceCapacityBatchReady\", \"AutoEssenceCapacityCannotReach\", \"AutoEssenceCapacityNothingLeft\"]",
+            "impact": "云画面延迟下点保存后仍隔着筛选弹窗读「已选择 0/200」，→ AutoEssenceCapacityNothingLeft/CannotReach 命中 → 本轮不分解直接退出，产出 0。",
+            "fix_scope": "只补云层 pipeline 数据（不碰 base），sa-1 名下。"
+        },
+        {
+            "id": "E-CLOUD-FIELD-DIFF",
+            "severity": "warn",
+            "evidence_class": "static",
+            "title": "云层与官方同文件字段不一致：Common/Button/ButtonColor.json",
+            "evidence": "见 cloud_layer_diff.field_diffs"
+        }
+    ]
+}
