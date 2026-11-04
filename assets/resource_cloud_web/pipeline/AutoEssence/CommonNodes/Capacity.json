@@ -1,0 +1,51 @@
+{
+    // 基质容量检查的页签切换（对应 base AutoEssence/CommonNodes/Capacity.json）。
+
+    // next 改为先 CursorPark：云串流会把鼠标指针画进画面，压住页签图标后 OnWeaponTab 只有 0.867。
+    "AutoEssenceCapacitySwitchToWeaponTab": {
+        "desc": "切换到武器基质标签页",
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [
+                    350,
+                    0,
+                    500,
+                    80
+                ],
+                "template": "EssenceFilter/EssenceTabNotChoose.png",
+                "threshold": 0.9
+            }
+        },
+        "pre_delay": 0,
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": 400,
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": [
+            "AutoEssenceCapacityCursorPark"
+        ]
+    },
+    // 把指针移到右侧详情面板留白（DirectHit + 固定点）。网页端专有，base 无此节点。
+    "AutoEssenceCapacityCursorPark": {
+        "desc": "把指针移到右侧详情面板留白，避免云串流把指针画进页签图标（否则 OnWeaponTab 只有 0.867）",
+        "recognition": "DirectHit",
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [
+                    977,
+                    448,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_wait_freezes": 200,
+        "next": [
+            "AutoEssenceCapacityOnWeaponTab"
+        ]
+    }
+}

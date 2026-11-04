@@ -1,0 +1,51 @@
+{
+    // 基质筛选的页签切换（对应 base EssenceFilter.json 的同名节点）。
+
+    // next 改为先 CursorPark（同 Capacity 的指针遮挡问题），并显式 rate_limit 0。
+    "EssenceFilterSwitchTab": {
+        "desc": "切换到武器基质标签页",
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [
+                    350,
+                    0,
+                    500,
+                    80
+                ],
+                "template": "EssenceFilter/EssenceTabNotChoose.png",
+                "threshold": 0.9
+            }
+        },
+        "pre_delay": 0,
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": 400,
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": [
+            "EssenceFilterCursorPark"
+        ]
+    },
+    // 点完页签把指针挪到右侧留白：CheckInInventory 与容量检查同模板同 ROI，指针压着只有 0.8896。
+    "EssenceFilterCursorPark": {
+        "desc": "点完页签把指针挪到右侧详情面板留白，避免压住图标（CheckInInventory 与容量检查同模板同 ROI，指针压着只有 0.8896）",
+        "recognition": "DirectHit",
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [
+                    977,
+                    448,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_wait_freezes": 200,
+        "next": [
+            "EssenceFilterCheckInInventory"
+        ]
+    }
+}

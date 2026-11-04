@@ -53,7 +53,7 @@
             "type": "Adb",
             "attach_resource_path": [
                 "./resource_adb",
-                "./resource_cloud_adb"
+                "./resource_cloud"
             ]
         },
         {
@@ -103,7 +103,11 @@
             "description": "$controller.Linux-Wlroots.description",
             "type": "Linux",
             "attach_resource_path": [
-                "./resource_linux"
+                "./resource_linux",
+                // 网页端跑的是云·终末地，云层（原 resource_cloud_adb）在这里生效
+                "./resource_cloud",
+                // 网页端薄覆盖层（原 web/resource_web + web/resource_web_homesrv）
+                "./resource_cloud_web"
             ],
             "linux": {
                 "input": "Wlr",
@@ -272,6 +276,8 @@
         "tasks/AndroidOpenGame.json",
         "tasks/CloseGame.json",
         "tasks/CloseGamePC.json",
+        // 网页端（fork 自有）：云·终末地网页启动链
+        "tasks/WebStartGame.json",
         // group: realtime
         "tasks/RealTimeTask.json",
         // group: backpack

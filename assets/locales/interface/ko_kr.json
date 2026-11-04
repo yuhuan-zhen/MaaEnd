@@ -2367,6 +2367,8 @@
     "task.Keymap.focus.interact_failed": "상호작용에 실패했습니다. 게임-설정-조작 과 MaaEnd-설정-작업 설정-키 바인딩 설정 이 일치하는지 확인해 주세요.",
     "task.LaunchGameLinux.description": "하이퍼그리프 런처 화면 안의 게임 시작 버튼을 클릭하는 역할만 담당합니다. 하이퍼그리프 런처 자체의 실행은 사전 프로그램 또는 직접 구성한 스크립트로 처리해야 합니다.",
     "task.LaunchGameLinux.label": "게임 실행 (Linux)",
+    "task.WebStartGame.description": "엔드필드 클라우드 웹 클라이언트에서 게임 시작 → 대기/로딩 → 월드 진입까지의 시작 체인을 실행합니다. 이미 게임 안에 있으면 건너뜁니다.",
+    "task.WebStartGame.label": "🕹️ 게임 실행 (웹)",
     "task.LevelUpOperator.label": "📈오퍼레이터 레벨 업",
     "task.OpenGame.focus.start_app_failed": "앱 실행에 실패했습니다",
     "task.OpenGame.focus.start_up_game_failed": "게임 시작에 실패했습니다",

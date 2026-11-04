@@ -1,0 +1,29 @@
+{
+    // 仓库切换弹窗（对应 base ItemTransfer.json 的同名节点）。
+
+    // ROI 移到左上角标题（云版实测 x≈176-276, y≈126-146）：base 的 [607,128,65,24] 落在右侧纯暗背景上，OCR 必为 0。
+    // 判定文字与上游一致（含 Switch/Depot 两个裸片段，兜住 OCR 把标题拆两行）。
+    "ItemTransferRepoSwitchButton": {
+        "desc": "【网页端覆盖 · ROI 对齐】云版「仓库切换」弹窗标题在左上角（实测 x≈176–276, y≈126–146），上游 ROI [607,128,65,24] 落在右侧纯暗背景上，OCR 必为 0。此处把搜索范围移到标题区域，判定文字仍与上游一致。",
+        "recognition": "OCR",
+        "roi": [
+            170,
+            118,
+            150,
+            36
+        ],
+        "expected": [
+            // 完整原文："仓库切换"（Switch / Depot 两个裸片段是 OCR 把标题拆两行的兜底）
+            // @i18n-skip
+            "仓库切换",
+            "倉庫切換",
+            "(?i)Switch\\s*Depot",
+            "倉庫切替",
+            "Switch",
+            "Depot"
+        ],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "rate_limit": 0
+    }
+}

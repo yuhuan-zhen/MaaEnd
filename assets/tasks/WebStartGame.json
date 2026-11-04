@@ -1,0 +1,16 @@
+{
+    "task": [
+        {
+            "name": "WebStartGame",
+            "label": "$task.WebStartGame.label",
+            "entry": "WebStartGameEntry",
+            "description": "$task.WebStartGame.description",
+            "group": [
+                "other_menu"
+            ],
+            "controller": [
+                "Linux-Wlroots"
+            ]
+        }
+    ]
+}

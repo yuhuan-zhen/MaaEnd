@@ -1,0 +1,74 @@
+{
+    // 退出/关屏链。base 的 __ScenePrivateAnyExit 是「ESC × 100 次、post_delay 3000」——
+    // 在认不出的 WebView 页面上会空转 300 秒（2026-10-20 实测 DailyRewards 重试 399 秒），网页端必须收紧。
+
+    // 覆盖 base：保留 ESC（网页有键盘，总控中枢这类面板 ESC 最可靠），max_hit 100→6、post_delay 3000→600。
+    // 点击式 AnyExit（识别 X 再点）实测会把「总控中枢」留在原地，故不采用。
+    "__ScenePrivateAnyExit": {
+        "desc": "【网页端覆盖】退出当前场景：保留 base 的 ESC 行为（网页有键盘，ESC 在「总控中枢」这类面板里最可靠），但把 max_hit 从 100 降到 6 —— 100 次 × post_delay 3000 会在认不出的 WebView 页面上空转 300 秒（2026-10-20 实测 DailyRewards 重试 399 秒）。点击式 AnyExit（识别 X 再点）实测会把「总控中枢」留在原地、后续任务全部 21 秒超时，故不采用。",
+        "max_hit": 6,
+        "recognition": "DirectHit",
+        "action": {
+            "type": "ClickKey",
+            "param": {
+                "key": 27
+            }
+        },
+        "pre_delay": 200,
+        "post_delay": 600
+    },
+    // 兜底按一次 ESC，max_hit 3。当前无节点引用（见 pipeline-migration.md 遗留项）。
+    "WebAnyExitEsc": {
+        "desc": "【网页端 · 兜底】按一次 ESC。max_hit 3：防止在没有关闭按钮的 WebView 页面上无限连按（上游 max_hit 100 × post_delay 3000 = 300 秒空转，就是被它拖的）。",
+        "max_hit": 3,
+        "recognition": "DirectHit",
+        "action": {
+            "type": "ClickKey",
+            "param": {
+                "key": 27
+            }
+        },
+        "post_delay": 800
+    },
+    // 通行证全屏页右上角 X。当前无节点引用（SceneAnyEnterWorld 里的插入已于 2026-10-21 撤回）。
+    "WebCloseProtocolPass": {
+        "desc": "网页端：通行证全屏页 -> 点右上角 X 关闭",
+        "max_hit": 2,
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "roi": [
+                    0,
+                    0,
+                    520,
+                    110
+                ],
+                "expected": [
+                    // 完整原文："通行证奖励"（英文 Pass Rewards 的空格不稳，用 (?i) 正则）
+                    // @i18n-skip
+                    "通行证奖励",
+                    "通行證獎勵",
+                    "通行证任务",
+                    "通行證任務",
+                    "(?i)Pass\\s*Rewards"
+                ],
+                "threshold": 0.3
+            }
+        },
+        "action": {
+            "type": "Click",
+            "param": {
+                "target": [
+                    1206,
+                    10,
+                    68,
+                    60
+                ]
+            }
+        },
+        "post_delay": 700,
+        "next": [
+            "SceneAnyEnterWorld"
+        ]
+    }
+}

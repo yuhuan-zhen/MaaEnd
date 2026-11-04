@@ -2367,6 +2367,8 @@
     "task.Keymap.focus.interact_failed": "インタラクトに失敗しました。 ゲーム-設定-操作 と MaaEnd-設定-タスク設定-キー割り当て設定 が一致しているか確認してください。",
     "task.LaunchGameLinux.description": "ハイパーグリフランチャー画面内の「ゲーム開始」ボタンをクリックするだけです。ハイパーグリフランチャー自体の起動は、前置プログラムまたは独自のスクリプトで行ってください。",
     "task.LaunchGameLinux.label": "ゲーム起動（Linux）",
+    "task.WebStartGame.description": "エンドフィールドのクラウド Web クライアントで「ゲーム開始 → 待機/読み込み → ワールド進入」の起動チェーンを実行します。すでにゲーム内ならスキップします。",
+    "task.WebStartGame.label": "🕹️ ゲーム起動（Web）",
     "task.LevelUpOperator.label": "📈オペレーターのレベルアップ",
     "task.OpenGame.focus.start_app_failed": "アプリの起動に失敗しました",
     "task.OpenGame.focus.start_up_game_failed": "ゲームの起動に失敗しました",

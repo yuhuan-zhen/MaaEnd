@@ -1,0 +1,38 @@
+{
+    // 云版传送链的覆盖（对应 base SceneManager/SceneMap.json 的同名节点）。
+    // 云版没有「确认传送」对话框：点锚点后右侧出信息卡、右下角直接出「传送」胶囊。
+
+    // 识别类型 TemplateMatch 替换 base 的 And：模板取自 720p 实拍帧（ROI 内自匹配 1.000，
+    // 负对照 after-transfer-loading 0.588）。action/next 仍沿用 base（本节点只写识别）。
+    "__ScenePrivateMapTeleportConfirm": {
+        "desc": "【网页端覆盖 · 云版传送】云版没有确认框：点锚点后右侧出信息卡、右下角直接出「传送」胶囊，点它进 LOADING。模板取自 720p 实拍帧（docs/cloud-web-20261026/test-20261027/map-720p.png），ROI 内自匹配 1.000，负对照 after-transfer-loading 0.588。action=Click 与 next 链沿用 base。",
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [
+                    1050,
+                    620,
+                    230,
+                    100
+                ],
+                "template": [
+                    "WebTeleport/TeleportButtonCloud.png"
+                ],
+                "threshold": 0.88
+            }
+        }
+    },
+    // 落地判据改用 InWorld：base 的 WorldMenu.png 在云版抖动到 0.193；
+    // And 包一层是因为 InWorld 是节点不是识别类型。
+    "__ScenePrivateMapTeleportSuccess": {
+        "desc": "【网页端覆盖 · 云版传送】落地判据：base 的 SceneManager/WorldMenu.png 在云版抖动到 0.193，改用 InWorld；And 包一层是因为 InWorld 是节点而不是识别类型。",
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "InWorld"
+                ]
+            }
+        }
+    }
+}

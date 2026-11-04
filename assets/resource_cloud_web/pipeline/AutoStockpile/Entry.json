@@ -1,0 +1,26 @@
+{
+    // 自动囤货入口（对应 base AutoStockpile/Entry.json）。
+
+    // post_delay 0→800：云版点击到页面切换有延迟，0 延迟会读到上一屏。
+    "AutoStockpileGotoElasticGoods": {
+        "desc": "选择弹性物资调度",
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "AutoStockpileElasticGoodsButton"
+                ]
+            }
+        },
+        "pre_delay": 0,
+        "action": {
+            "type": "Click",
+            "param": {}
+        },
+        "post_delay": 800,
+        "rate_limit": 0,
+        "next": [
+            "AutoStockpileSelectMarket"
+        ]
+    }
+}

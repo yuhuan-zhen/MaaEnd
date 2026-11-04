@@ -1,0 +1,121 @@
+{
+    // 网页端启动链（原 web/resource_web 的 Web* 节点）：落地页 → 排队/加载 → 大世界或菜单。
+    // 官方 resource_cloud 的 SceneLogin.json 只改 __ScenePrivateLogin（云版用 News 模板）；
+    // 网页端多了「开始游戏」按钮/排队/月卡这些浏览器门面，故另立同名文件放在同一业务目录。
+
+    // 启动链入口。timeout 10 分钟：加载阶段黑屏，三个判据都不命中，短预算会误判失败。
+    "WebStartGameEntry": {
+        "desc": "【网页端 · 启动器】点一次运行就完成「开始游戏 → 排队/加载 → 进入游戏」。已经在游戏里（大世界或菜单）则直接跳过；已在排队则只等待。浏览器窗口需要先用 2-启动网页端.bat 打开并连上。timeout 给 10 分钟：游戏加载阶段是黑屏（三个判据都不命中），预算太短会误判失败。",
+        "recognition": {
+            "type": "DirectHit",
+            "param": {}
+        },
+        "pre_delay": 0,
+        "post_delay": 0,
+        "timeout": 600000,
+        "rate_limit": 0,
+        "next": [
+            "WebSessionBusy",
+            "WebMonthlyCard",
+            "WebAlreadyInGame",
+            "WebTitleContinue",
+            "WebQueueDetected",
+            "WebLauncherStartButton"
+        ]
+    },
+    // homesrv 变体（生产实际生效的那个）：平涂按钮 NCC 上不去，改 OCR。
+    // 原 TemplateMatch 变体（模板 WebStartGame/StartButton.png、ROI [700,450,560,200]、阈值 0.95）
+    // 在云版配色下最高只有 0.486，已退役；模板文件仍留在 image/WebStartGame/ 备切换。
+    "WebLauncherStartButton": {
+        "desc": "【homesrv 变体】启动页「开始游戏」。原 TemplateMatch 在当前配色下最高只有 0.486（平涂按钮 NCC 天生低，换模板也救不了），改用 OCR：同帧 0.9999。",
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "roi": [
+                    700,
+                    450,
+                    560,
+                    200
+                ],
+                "expected": [
+                    "开始游戏"
+                ]
+            }
+        }
+    },
+    // 排队中：只等，不点（此时开始按钮不可点）。
+    "WebQueueDetected": {
+        "desc": "【网页端 · 启动器】已经在排队中（排队中/预计等待/加速中）。此时启动按钮不可点，只需等待。",
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "roi": [
+                    380,
+                    120,
+                    560,
+                    460
+                ],
+                "expected": [
+                    // 完整原文示例："排队中，预计等待 3 分钟"（倒计时数字每次都变，只能按片段匹配）
+                    // @i18n-skip
+                    "排队中",
+                    "预计等待",
+                    "加速中",
+                    "正在排队",
+                    "Waiting",
+                    "queue"
+                ]
+            }
+        },
+        "pre_delay": 0,
+        "action": "DoNothing",
+        "post_delay": 0,
+        "timeout": 600000,
+        "rate_limit": 0,
+        "next": [
+            "WebSessionBusy",
+            "WebMonthlyCard",
+            "WebWaitInGame",
+            "WebTitleContinue"
+        ]
+    },
+    // 排队/加载结束的判据：大世界或菜单都算就绪。
+    "WebWaitInGame": {
+        "desc": "【网页端 · 启动器】等待排队/加载结束、真正进入游戏。大世界与菜单都算就绪。",
+        "recognition": {
+            "type": "Or",
+            "param": {
+                "any_of": [
+                    "InWorld",
+                    "InMenuList"
+                ]
+            }
+        },
+        "pre_delay": 0,
+        "action": "DoNothing",
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": [],
+        "focus": {
+            "Node.Recognition.Starting": "等待进入游戏（排队/加载中）…"
+        }
+    },
+    // 已在游戏内：启动链的命中终点，next 为空即结束。
+    "WebAlreadyInGame": {
+        "desc": "【网页端 · 启动器】判定：已经在游戏内（大世界 InWorld 或菜单 InMenuList 均算就绪）",
+        "recognition": {
+            "type": "Or",
+            "param": {
+                "any_of": [
+                    "InWorld",
+                    "InMenuList"
+                ]
+            }
+        },
+        "pre_delay": 0,
+        "action": "DoNothing",
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": []
+    }
+}

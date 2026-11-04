@@ -1,0 +1,24 @@
+{
+    // 领奖结算弹窗（对应 base Common/Button/CloseRewardsButton.json）。
+
+    // 帝江号/每日奖励领取后停在「获得奖励」上，此时 InWorld/InMenuList 都不命中，后续任务全部空转。
+    // 上游 CloseRewardsButton 在网页帧 0.9785、标题 OCR 0.9998，直接复用（And 取按钮框）。
+    // 运行时也被 recovery.py 的 RESUME_CHAIN 直接按名字调用。
+    "WebCloseRewards": {
+        "desc": "【网页端覆盖】「获得奖励」结算弹窗（帝江号/每日奖励领取后会停在它上面，此时 InWorld/InMenuList 都不命中，后续任务全部空转）。上游 CloseRewardsButton 在网页帧实测 0.9785、标题 OCR 0.9998，直接复用。",
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "CloseRewardsButtonText",
+                    "CloseRewardsButton"
+                ],
+                "box_index": 1
+            }
+        },
+        "pre_delay": 0,
+        "action": "Click",
+        "post_delay": 1200,
+        "rate_limit": 0
+    }
+}

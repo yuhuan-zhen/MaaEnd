@@ -1,0 +1,53 @@
+{
+    // 进入菜单总列表（对应 base SceneManager/SceneMenu.json）。
+
+    // next 去掉 __SceneImageCheck：那是 PC 端 OSD/Mod/语言/抓 UID 五项自检，
+    // 云端点左下角后画面直接回大世界、登出对话框从不出现（2026-10-17 实测 20 秒空转 5640 次），
+    // 对浏览器/云串流也无意义（无注册表、无 OSD）。只保留「Alt 点开菜单 + 确认已在列表」。
+    "__ScenePrivateWorldEnterMenuList": {
+        "desc": "【网页端覆盖 · 云串流适配】从大世界进入菜单总列表。上游 next 是 [__SceneImageCheck, __ScenePrivateAnyEnterMenuListSuccess]：前者会点左下角，期待弹出「登录界面/确认」登出对话框，再借那张对话框做 OSD/Mod/画面颜色/语言/抓 UID 五项 PC 渲染自检。云端实测（2026-10-17 15:31~15:33 日志）：点击后画面回到大世界、登出对话框从未出现 ⇒ __SceneImageCheckDialogIn 在 20 秒内空转 5640 次全部落空 ⇒ 任务失败。这五项自检对浏览器/云串流无意义：OSD 遮挡与 Mod 检测针对 PC 客户端；CaptureUid 在 Win32 控制器下读游戏注册表，而浏览器无该注册表项。故这里只保留「Alt+点开菜单」与「确认已在菜单列表」两步，去掉整条自检链。ImageCheckNotPassedRecognition 仅被 __SceneImageCheck 使用（已核），跳过不影响其他节点。",
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [
+                    -200,
+                    0,
+                    200,
+                    200
+                ],
+                "template": [
+                    "SceneManager/WorldMenu.png"
+                ],
+                "green_mask": true
+            }
+        },
+        "pre_wait_freezes": {
+            "time": 100,
+            "timeout": 1000
+        },
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "RepeatUntilFoundAction",
+                "custom_action_param": {
+                    "custom_action": "AutoAltClickAction",
+                    "interval_ms": 6000,
+                    "wait_nodes": [
+                        "__ScenePrivateAnyEnterMenuListSuccess"
+                    ]
+                },
+                "target_offset": [
+                    5,
+                    5,
+                    -10,
+                    -10
+                ]
+            }
+        },
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": [
+            "__ScenePrivateAnyEnterMenuListSuccess"
+        ]
+    }
+}

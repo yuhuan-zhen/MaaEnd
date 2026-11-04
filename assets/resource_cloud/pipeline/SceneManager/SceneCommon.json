@@ -1,0 +1,77 @@
+{
+    // 网页端/云 ADB 专用的触摸退出链（fork 自有，官方 ba5887d64 的 resource_cloud 未采纳；官方目前仍用 base 的 ESC 版）。
+    // 背景：云终末地不接受 BACK 键（ADB 控制器默认把 ESC 重映射成 key=4），只能点画面上的 X / 手表 / 返回胶囊 / 「点击屏幕继续」。
+    // 网页端（Linux-Wlroots，有键盘）由 resource_cloud_web/SceneManager/Exit.json 用 ESC 版覆盖同名节点，本文件只对 CloudADB 生效。
+
+    // 识别右上角 X 或大世界手表并点击；点击式退出在网页端实测会把「总控中枢」留在原地，
+    // 但云 ADB 没有 ESC 可用，这里只能点。
+    "__ScenePrivateAnyExit": {
+        "desc": "云终末地触摸版退出场景：识别右上角 X 或大世界手表并点击（不接受 BACK 按键）",
+        "recognition": {
+            "type": "Or",
+            "param": {
+                "any_of": [
+                    "CloseButtonType1",
+                    "ProtosyncMenuButton",
+                    "BackButton",
+                    "__ScenePrivateCloudBackPill",
+                    "__ScenePrivateCloudClickToContinue"
+                ]
+            }
+        },
+        "pre_delay": 0,
+        "action": {
+            "type": "Click",
+            "param": {
+                "target_offset": [
+                    0,
+                    16,
+                    0,
+                    -16
+                ]
+            }
+        },
+        "post_delay": 600
+    },
+    // 面板右上角「← 返回」胶囊：本地 ADB 靠 BACK 退出，云终末地只能点它。复用 AutoSell 的安卓模板，只取识别框。
+    "__ScenePrivateCloudBackPill": {
+        "desc": "云终末地：面板右上角「← 返回」胶囊按钮",
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "roi": [
+                    900,
+                    0,
+                    380,
+                    187
+                ],
+                "template": [
+                    "AutoSell/FriendsPricesBack.png"
+                ],
+                "threshold": 0.8
+            }
+        }
+    },
+    // 底部「点击屏幕继续」的结算弹窗：画面上没有 X 和返回键，只能点它。
+    "__ScenePrivateCloudClickToContinue": {
+        "desc": "云终末地：底部「点击屏幕继续」提示",
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "roi": [
+                    440,
+                    630,
+                    400,
+                    90
+                ],
+                "expected": [
+                    "点击屏幕继续",
+                    "按任意處繼續",
+                    "(?i)Click\\s*to\\s*continue",
+                    "クリックして続行",
+                    "화면을 눌러 계속하기"
+                ]
+            }
+        }
+    }
+}
