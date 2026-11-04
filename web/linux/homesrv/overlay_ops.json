@@ -1,0 +1,25 @@
+{
+    "version": 1,
+    "tasks": {
+        "source": "web/tasks",
+        "stage_from": "assets/tasks",
+        "include": [
+            "WebStartGame.json"
+        ],
+        "target": "tasks",
+        "why": "仓库自建任务在发行版包里没有；auto_update 整包覆盖 tasks/ 之后必须叠回，否则任务清单与 interface.json 对不上。stage_from/include 只点名我们自己维护的文件，不整包覆盖上游 tasks（避免把仓库里的旧版任务降级到发行版上）"
+    },
+    "interface_imports": [
+        "tasks/WebStartGame.json"
+    ],
+    "text_patches": [
+        {
+            "file": "resource/pipeline/nodes.json",
+            "anchor_regex": "\"AutoStockpileSelectMarket\"\\s*:\\s*\\{",
+            "window": 900,
+            "find": "\"pre_wait_freezes\": 80",
+            "replace": "\"pre_wait_freezes\": 160",
+            "why": "上游 470d64432 之前 pre_wait_freezes 80 太短，进商店等待不稳；发版包自带 160 后可删本条。用 anchor_regex 而不是字面量：紧凑/格式化两种 nodes.json 都能命中，且不会误命中 next 里对节点名的引用"
+        }
+    ]
+}

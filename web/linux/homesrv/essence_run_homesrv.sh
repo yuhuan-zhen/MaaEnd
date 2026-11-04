@@ -1,28 +1,42 @@
 #!/usr/bin/env bash
 # homesrv 版基质刷取（独立链）：起浏览器 → 最多 MAX_ATTEMPTS 轮 WebStartGame+AutoEssence → 收尾。
 # 目标：成功 TARGET_OK 轮即停（默认 4），失败继续重试，总尝试上限 MAX_ATTEMPTS（默认 6）。
-# 公共层（会话变量/日志轮转/启动/等 CDP/归位/浮层/收尾）在 lib.sh；本文件只保留 essence 的差异：多轮重试与退出码语义。
-# 可用环境变量临时覆盖：MAAEND_ESSENCE_OK=1 MAAEND_ESSENCE_MAX=2 ...
+# 公共层（会话变量/资源层/日志轮转/启动/等 CDP/归位/浮层/收尾）在 lib.sh；
+# 本文件只保留 essence 的差异：多轮重试与退出码语义。
+#
+# 环境变量：MAAEND_ESSENCE_OK / MAAEND_ESSENCE_MAX / MAAEND_ESSENCE_SLEEP 临时覆盖；
+#           MAAEND_INSTANCE 覆盖预设；MAAEND_TASKS 覆盖任务串。
+# 部署目录：MAAEND_DIST → MAAEND_ROOT → ~/maaend。
+#
+# 退出码：0 达标（或至少 1 轮成功）；2 缺预设实例；10 浏览器启动失败；否则沿用最后一轮的 rc。
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source-path=SCRIPTDIR
 # shellcheck source=lib.sh
 . "$HERE/lib.sh"
 
-ROOT="$HOME/maaend"
+ROOT="${MAAEND_DIST:-${MAAEND_ROOT:-$HOME/maaend}}"
 TASKS="WebStartGame,AutoEssence"
-INSTANCE="hmuddz8"
+INSTANCE=""
 TARGET_OK="${MAAEND_ESSENCE_OK:-4}"
 MAX_ATTEMPTS="${MAAEND_ESSENCE_MAX:-6}"
 RETRY_SLEEP="${MAAEND_ESSENCE_SLEEP:-20}"
 
 mh_init "$ROOT" "$ROOT/essence.log"
-# essence.conf 是部署机上的运行时配置，仓库里没有；缺失就用上面的默认值
+# essence.conf 是部署机上的运行时配置，仓库里没有；缺失就用环境变量或上面的默认。
 # shellcheck source=/dev/null
 if [ -f "$CONF" ]; then
   . "$CONF"
 fi
+INSTANCE="${MAAEND_INSTANCE:-${INSTANCE:-}}"
 TASKS="${MAAEND_TASKS:-${TASKS:-}}"
+
+if [ -z "$INSTANCE" ]; then
+  mh_err "[X] 没有预设实例：在 $CONF 里写 INSTANCE=<预设 id>，或设 MAAEND_INSTANCE"
+  mh_bell
+  exit 2
+fi
 
 echo
 echo "===== $(date -Is) 开始  预设=$INSTANCE 任务=[${TASKS:-全部}] 目标成功=$TARGET_OK 上限=$MAX_ATTEMPTS ====="

@@ -1,74 +1,117 @@
 #!/usr/bin/env bash
-# homesrv 版：起 sway（headless）+ Chrome（复用 M7A 自带的 Chrome for Testing）。
+# homesrv 版：起 sway（headless）+ Chrome（优先 MAAEND_CHROME，其次系统安装，最后 MXU 自带）。
 # 与 WSL 版等价，只是路径/浏览器不同；用户级运行，不需要 root。
+#
+# 环境变量（都可选）：
+#   MAAEND_CHROME        Chrome 可执行文件（给了就不再自动探测）
+#   MAAEND_PROFILE       用户数据目录，默认 ~/.config/endfield-web
+#   MAAEND_WEB_CDP_PORT  调试端口，默认 9334（与 run_daily_linux.py 共用同一个变量）
+#   MAAEND_RES / MAAEND_DSF / MAAEND_WIN  物理分辨率 / 缩放 / 窗口（geometry.conf 或环境变量）
+#   MAAEND_URL           启动页，默认云·终末地网页端
+#
+# 退出码：0 成功；2 找不到 Chrome；3 视口连续 4 次不符（sway 输出未就绪）。
 set -uo pipefail
 
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 浏览器探测顺序：显式指定 → 系统安装 → 生产机上的两个已知位置。
 if [ -n "${MAAEND_CHROME:-}" ]; then
   CHROME="$MAAEND_CHROME"
-elif [ -x "$HOME/opt/chrome/opt/google/chrome/google-chrome" ]; then
-  CHROME="$HOME/opt/chrome/opt/google/chrome/google-chrome"   # 正式版，无 "for Testing" 提示条
 else
-  CHROME="$HOME/m7a/3rdparty/WebBrowser/chrome/linux64/140.0.7339.207/chrome"
+  CHROME=""
+  for cand in \
+    "$(command -v google-chrome 2>/dev/null || true)" \
+    "$(command -v google-chrome-stable 2>/dev/null || true)" \
+    "$(command -v chromium 2>/dev/null || true)" \
+    "$(command -v chromium-browser 2>/dev/null || true)" \
+    "$HOME/opt/chrome/opt/google/chrome/google-chrome" \
+    "$HOME"/m7a/3rdparty/WebBrowser/chrome/linux64/*/chrome
+  do
+    if [ -n "$cand" ] && [ -x "$cand" ]; then
+      CHROME="$cand"
+      break
+    fi
+  done
 fi
+if [ -z "${CHROME:-}" ] || [ ! -x "$CHROME" ]; then
+  echo "[X] 找不到 Chrome；用 MAAEND_CHROME=/path/to/chrome 指定" >&2
+  exit 2
+fi
+
 PROFILE="${MAAEND_PROFILE:-$HOME/.config/endfield-web}"
-URL="${1:-https://endfield.hypergryph.com/cloud}"
+CDP_PORT="${MAAEND_WEB_CDP_PORT:-9334}"
+URL="${MAAEND_URL:-${1:-https://endfield.hypergryph.com/cloud}}"
+TMP="${TMPDIR:-/tmp}"
 # cron 里没有 XDG_RUNTIME_DIR，会落到 /tmp/xdg-run；实测那样点击不生效。
 # 统一到用户 session 的运行时目录（存在才用），与手动运行保持一致。
 if [ -z "${XDG_RUNTIME_DIR:-}" ] || [ ! -d "${XDG_RUNTIME_DIR:-}" ]; then
   if [ -d "/run/user/$(id -u)" ]; then
-    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    XDG_RUNTIME_DIR="/run/user/$(id -u)"
+    export XDG_RUNTIME_DIR
   else
     export XDG_RUNTIME_DIR="/tmp/xdg-run"
   fi
 fi
 RUNTIME="$XDG_RUNTIME_DIR"
-SWAY_CONF=/tmp/endfield-sway.conf
+SWAY_CONF="$TMP/endfield-sway.conf"
 
-export XDG_RUNTIME_DIR="$RUNTIME"
 export XDG_SESSION_TYPE=wayland
 export WAYLAND_DISPLAY=wayland-1
-mkdir -p "$RUNTIME" "$PROFILE"; chmod 700 "$RUNTIME"
+export MAAEND_WEB_CDP_PORT="$CDP_PORT"
+mkdir -p "$RUNTIME" "$PROFILE"
+chmod 700 "$RUNTIME"
 
 # 物理输出与缩放可调：默认 2560x1440 + Chrome DSF 1.5 → CSS 1706x960。
 # 云网页版用 SwiftShader 软渲染，像素数直接决定 CPU：720p 大约只需 1/4。
 # 例：MAAEND_RES=1280x720 MAAEND_DSF=1 MAAEND_WIN=1280,720 ./chrome_homesrv.sh
 # 生产几何：同目录 geometry.conf（set_geometry.sh 720p|1440p 一键切换，可回档）。
 # 优先级：显式 MAAEND_* 环境变量 > geometry.conf > 下面这行的内置默认。
-if [ -z "${MAAEND_RES:-}" ] && [ -f "$(dirname "$0")/geometry.conf" ]; then
-  . "$(dirname "$0")/geometry.conf"
+if [ -z "${MAAEND_RES:-}" ] && [ -f "$HERE/geometry.conf" ]; then
+  # shellcheck source-path=SCRIPTDIR
+  # shellcheck source=geometry.conf
+  . "$HERE/geometry.conf"
 fi
 
 SWAY_RES="${MAAEND_RES:-2560x1440}"
 CHROME_DSF="${MAAEND_DSF:-1.5}"
 CHROME_WIN="${MAAEND_WIN:-1706,960}"
 # 防御 CRLF 配置：geometry.conf 若被 Windows 编辑器保存过，source 进来的值会带 \r，
-# 视口校验会变成「1280x720 ≠ 1280x720\r」并无限重启 Chrome。
+# 视口校验会变成「1280x720 ≠ 1280x720」并无限重启 Chrome。
+SWAY_RES="${SWAY_RES//$'\r'/}"
+CHROME_DSF="${CHROME_DSF//$'\r'/}"
 CHROME_WIN="${CHROME_WIN//$'\r'/}"
 printf '%s\n' \
   "output HEADLESS-1 resolution $SWAY_RES scale 1" \
   'output HEADLESS-1 bg #000000 solid_color' \
-  'default_border none' > "$SWAY_CONF"
+  'default_border none' >"$SWAY_CONF"
 
 if pgrep -x sway >/dev/null 2>&1 && [ ! -S "$RUNTIME/wayland-1" ]; then
   echo "[i] 检测到 sway 跑在别的 socket 上，重启到 $RUNTIME"
-  pkill -x swaybg 2>/dev/null; pkill -x sway 2>/dev/null; sleep 2
+  pkill -x swaybg 2>/dev/null || true
+  pkill -x sway 2>/dev/null || true
+  sleep 2
 fi
 
 if ! pgrep -x sway >/dev/null 2>&1; then
   echo "[i] 起 sway"
   WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman LIBSEAT_BACKEND=noop \
-    setsid sway -c "$SWAY_CONF" </dev/null >/tmp/sway-endfield.log 2>&1 &
-  for i in $(seq 1 15); do sleep 1; [ -S "$RUNTIME/wayland-1" ] && break; done
+    setsid sway -c "$SWAY_CONF" </dev/null >"$TMP/sway-endfield.log" 2>&1 &
+  for _ in $(seq 1 15); do
+    sleep 1
+    if [ -S "$RUNTIME/wayland-1" ]; then
+      break
+    fi
+  done
 fi
 
-pkill -f "user-data-dir=$PROFILE" 2>/dev/null
+pkill -f "user-data-dir=$PROFILE" 2>/dev/null || true
 sleep 2
 # 强杀会留下 Singleton 锁，下一次 Chrome 会立刻退出（表现为"启动浏览器失败"）
 rm -f "$PROFILE"/SingletonLock "$PROFILE"/SingletonCookie "$PROFILE"/SingletonSocket "$PROFILE"/lockfile 2>/dev/null
+
 launch_chrome() {
   setsid "$CHROME" \
     --ozone-platform=wayland \
-    --test-type \
     --lang=zh-CN \
     --force-device-scale-factor="$CHROME_DSF" \
     --no-sandbox --test-type \
@@ -80,10 +123,10 @@ launch_chrome() {
     --disable-background-timer-throttling \
     --deny-permission-prompts \
     --autoplay-policy=no-user-gesture-required \
-    --remote-debugging-port=9334 --remote-debugging-address=127.0.0.1 \
+    --remote-debugging-port="$CDP_PORT" --remote-debugging-address=127.0.0.1 \
     --user-data-dir="$PROFILE" \
     --no-first-run --no-default-browser-check --hide-crash-restore-bubble \
-    "$URL" </dev/null >/tmp/chrome-endfield.log 2>&1 &
+    "$URL" </dev/null >"$TMP/chrome-endfield.log" 2>&1 &
   sleep 16
 }
 
@@ -94,22 +137,26 @@ launch_chrome() {
 check_viewport() {
   python3 - <<'PY'
 import json
+import os
 import time
 import urllib.request
 
 try:
     import websocket
 except ImportError:
-    print("?"); raise SystemExit
+    print("?")
+    raise SystemExit
 
+port = os.environ.get("MAAEND_WEB_CDP_PORT") or "9334"
 deadline = time.time() + 40
 last = "?"
 while time.time() < deadline:
     try:
-        d = json.load(urllib.request.urlopen("http://127.0.0.1:9334/json", timeout=5))
+        d = json.load(urllib.request.urlopen("http://127.0.0.1:%s/json" % port, timeout=5))
         pages = [t for t in d if t["type"] == "page"]
         if not pages:
-            time.sleep(2); continue
+            time.sleep(2)
+            continue
         ws = websocket.create_connection(pages[0]["webSocketDebuggerUrl"], timeout=8, suppress_origin=True)
         ws.send(json.dumps({"id": 1, "method": "Runtime.evaluate",
                             "params": {"expression":
@@ -127,7 +174,8 @@ while time.time() < deadline:
             st = json.loads(val)
             last = st.get("vp", "?")
             if st.get("rs") == "complete" and "endfield" in (st.get("href") or ""):
-                print(last); raise SystemExit
+                print(last)
+                raise SystemExit
     except SystemExit:
         raise
     except Exception:
@@ -137,7 +185,7 @@ print(last)
 PY
 }
 
-echo "[i] 起 Chrome: $CHROME"
+echo "[i] 起 Chrome: $CHROME（CDP $CDP_PORT，视口 $CHROME_WIN）"
 launch_chrome
 
 WANT_VP="${CHROME_WIN/,/x}"
@@ -159,25 +207,25 @@ for attempt in 1 2 3 4; do
     echo "[!] 视口连续 4 次不符，中止（sway 输出可能未就绪）" >&2
     exit 3
   fi
-  pkill -f "user-data-dir=$PROFILE" 2>/dev/null
+  pkill -f "user-data-dir=$PROFILE" 2>/dev/null || true
   sleep 3
   rm -f "$PROFILE"/SingletonLock "$PROFILE"/SingletonCookie "$PROFILE"/SingletonSocket "$PROFILE"/lockfile 2>/dev/null
   launch_chrome
 done
 
-# 隐藏云端悬浮球：它浮在 canvas 上、默认停在左上角，会遮住游戏标题区（OCR/模板都会受它影响）。
-# 脚本对当前页面立即生效，并注册到之后的每次页面加载。
-HIDE_PY="$(dirname "$0")/../overlay_ctl.py"
-[ -f "$HIDE_PY" ] || HIDE_PY="$(dirname "$0")/hide_cloud_overlay.py.bak-20261102"
-[ -f "$HIDE_PY" ] || HIDE_PY="$(dirname "$0")/hide_cloud_ball.py"
-if [ -f "$HIDE_PY" ]; then
-  pkill -f "hide_cloud_ball.py --watch" 2>/dev/null
-  pkill -f "hide_cloud_overlay.py --watch" 2>/dev/null
-  pkill -f "overlay_ctl.py --watch" 2>/dev/null
-  setsid python3 "$HIDE_PY" --watch </dev/null >/tmp/hermes-hide-overlay.log 2>&1 &
+# 隐藏云端悬浮球与延迟角标：它们浮在 canvas 上、默认停在左上角，会遮住游戏标题区（OCR/模板都会受它影响）。
+# 注入器只有一份：web/linux/overlay_ctl.py（实现在 maaend_web/overlay.py），同时注入
+# cloud_policy_linux.js。脚本对当前页面立即生效，并注册到之后的每次页面加载。
+OVERLAY_PY="$HERE/../overlay_ctl.py"
+if [ -f "$OVERLAY_PY" ]; then
+  pkill -f "overlay_ctl.py --watch" 2>/dev/null || true
+  setsid python3 "$OVERLAY_PY" --watch --port "$CDP_PORT" </dev/null >"$TMP/maaend-overlay.log" 2>&1 &
+else
+  echo "[!] 缺少 $OVERLAY_PY：浮层不会被抹平（部署不完整？先跑 homesrv/deploy.sh）" >&2
 fi
 
+CHROME_N=$(pgrep -fc -- "user-data-dir=$PROFILE" 2>/dev/null) || CHROME_N=0
 echo "  socket: $RUNTIME/wayland-1"
-echo "  进程: $(ps -eo args | grep -c '[e]ndfield-web')"
+echo "  进程: ${CHROME_N:-0}"
 
-curl -s --max-time 5 http://127.0.0.1:9334/json/version | head -2
+curl -s --max-time 5 "http://127.0.0.1:$CDP_PORT/json/version" | head -2
