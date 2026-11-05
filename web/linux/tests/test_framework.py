@@ -6,8 +6,10 @@
 跑法：``python -m unittest discover -s web/linux/tests -v``（在仓库根）。
 """
 
+import ctypes
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import types
@@ -31,55 +33,120 @@ def fake_modules(name: str, **attrs) -> dict:
 
 
 class NoFrameworkTest(unittest.TestCase):
-    """没有 maa 时的行为：import 本模块不拉框架，preload 静默跳过。"""
+    """没有 maa 时的行为：import 本模块不拉框架，预加载路径静默跳过。"""
 
     def test_import_does_not_pull_maa(self) -> None:
-        self.assertNotIn("maa", sys.modules)
+        """在干净子进程里 import framework，确认没有把 maa 拉进来。
 
-    def test_preload_so_is_none_without_framework(self) -> None:
-        self.assertIsNone(framework._preload_so())
+        不能在本进程断言：``unittest discover`` 会先导入其它测试模块，
+        其中会碰真 maa（config 的默认参数探测），把它留在 ``sys.modules`` 里。
+        测的是「import 本身不拉框架」这个契约，所以必须换一个干净解释器。
+        """
+        pkg_dir = Path(__file__).resolve().parent.parent
+        code = (
+            "import sys; "
+            f"sys.path.insert(0, {str(pkg_dir)!r}); "
+            "import maaend_web.framework; "
+            "sys.exit(0 if 'maa' not in sys.modules else 3)"
+        )
+        proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, f"maa 被提前导入：{proc.stderr[-400:]}")
 
-    def test_ensure_preload_is_noop_without_framework(self) -> None:
-        with mock.patch.object(framework.os, "execv") as execv:
-            framework.ensure_preload(log=lambda _m: None)
-        execv.assert_not_called()
-
-
-class EnsurePreloadTest(unittest.TestCase):
-    """有控制单元 DSO 时：补 LD_PRELOAD 并重新 exec 自己（否则 relative_move 失效）。"""
-
-    def test_sets_preload_and_reexecs(self) -> None:
+    def test_control_unit_so_is_none_without_framework(self) -> None:
         with (
-            mock.patch.object(framework, "_preload_so", return_value="/opt/maa/lib/libMaaLinuxControlUnit.so"),
+            mock.patch.object(framework.sys, "platform", "linux"),
+            mock.patch.dict(sys.modules, {"maa": None}),
+        ):
+            self.assertIsNone(framework._control_unit_so())
+
+    def test_control_unit_so_is_none_off_linux(self) -> None:
+        """非 Linux：这个 DSO 不存在，返回 None 而不是报错。"""
+        with mock.patch.object(framework.sys, "platform", "win32"):
+            self.assertIsNone(framework._control_unit_so())
+
+
+class RelativeMoveSupportTest(unittest.TestCase):
+    """控制单元预加载：多态区分 + 不重启进程（相对 move/scroll 的前提）。"""
+
+    def setUp(self) -> None:
+        framework._control_unit_ready = False
+        self.addCleanup(setattr, framework, "_control_unit_ready", False)
+
+    def test_no_framework_is_silent(self) -> None:
+        """没装 maa：不适用，静默跳过。"""
+        with mock.patch.object(framework, "_control_unit_so", return_value=None):
+            framework.ensure_relative_move_support(log=lambda _m: None)
+
+    def test_ld_preload_short_circuits(self) -> None:
+        """部署层已设 LD_PRELOAD：跳过，不重复加载。"""
+        with (
+            mock.patch.object(framework.sys, "platform", "linux"),
+            mock.patch.dict(os.environ, {"LD_PRELOAD": "/opt/maa/lib/libMaaLinuxControlUnit.so"}),
+            mock.patch.object(framework.ctypes, "CDLL") as cdll,
+        ):
+            framework.ensure_relative_move_support(log=lambda _m: None)
+        cdll.assert_not_called()
+
+    def test_loads_with_rtld_global(self) -> None:
+        """正常路径：CDLL 且 mode 含 RTLD_GLOBAL，且不调用 execv（不重启进程）。"""
+        so = Path("/opt/maa/lib/libMaaLinuxControlUnit.so")
+        with (
+            mock.patch.object(framework, "_control_unit_so", return_value=so),
             mock.patch.dict(os.environ, {"LD_PRELOAD": ""}),
+            mock.patch.object(framework.sys, "platform", "linux"),
+            mock.patch.object(framework.ctypes, "CDLL") as cdll,
             mock.patch.object(framework.os, "execv") as execv,
         ):
-            framework.ensure_preload(log=lambda _m: None)
-            self.assertEqual(os.environ["LD_PRELOAD"], "/opt/maa/lib/libMaaLinuxControlUnit.so")
-        execv.assert_called_once()
-        self.assertEqual(execv.call_args[0][0], sys.executable)
-
-    def test_keeps_existing_preload(self) -> None:
-        with (
-            mock.patch.object(framework, "_preload_so", return_value="/opt/lib/libMaaLinuxControlUnit.so"),
-            mock.patch.dict(os.environ, {"LD_PRELOAD": "/usr/lib/libfoo.so"}),
-            mock.patch.object(framework.os, "execv") as execv,
-        ):
-            framework.ensure_preload(log=lambda _m: None)
-            self.assertEqual(
-                os.environ["LD_PRELOAD"],
-                "/opt/lib/libMaaLinuxControlUnit.so:/usr/lib/libfoo.so",
-            )
-        execv.assert_called_once()
-
-    def test_skips_when_already_loaded(self) -> None:
-        with (
-            mock.patch.object(framework, "_preload_so", return_value="/opt/lib/libMaaLinuxControlUnit.so"),
-            mock.patch.dict(os.environ, {"LD_PRELOAD": "/opt/lib/libMaaLinuxControlUnit.so"}),
-            mock.patch.object(framework.os, "execv") as execv,
-        ):
-            framework.ensure_preload(log=lambda _m: None)
+            framework.ensure_relative_move_support(log=lambda _m: None)
+        cdll.assert_called_once()
+        self.assertEqual(cdll.call_args.kwargs["mode"], framework._RTLD_FLAGS)
         execv.assert_not_called()
+
+    @unittest.skipUnless(sys.platform == "linux", "RTLD_* 只在 POSIX 上存在")
+    def test_rtld_flags_are_global_and_now(self) -> None:
+        """在真正会跑这段代码的平台上，确认标志就是 RTLD_GLOBAL|RTLD_NOW。"""
+        self.assertEqual(framework._RTLD_FLAGS, ctypes.RTLD_GLOBAL | ctypes.RTLD_NOW)
+
+    def test_idempotent(self) -> None:
+        so = Path("/opt/maa/lib/libMaaLinuxControlUnit.so")
+        with (
+            mock.patch.object(framework, "_control_unit_so", return_value=so),
+            mock.patch.dict(os.environ, {"LD_PRELOAD": ""}),
+            mock.patch.object(framework.sys, "platform", "linux"),
+            mock.patch.object(framework.ctypes, "CDLL") as cdll,
+        ):
+            framework.ensure_relative_move_support(log=lambda _m: None)
+            framework.ensure_relative_move_support(log=lambda _m: None)
+        cdll.assert_called_once()
+
+    def test_cdll_failure_raises(self) -> None:
+        """加载失败不能装没事：抛错，让调用方停下。"""
+        so = Path("/x/libMaaLinuxControlUnit.so")
+        with (
+            mock.patch.object(framework, "_control_unit_so", return_value=so),
+            mock.patch.dict(os.environ, {"LD_PRELOAD": ""}),
+            mock.patch.object(framework.sys, "platform", "linux"),
+            mock.patch.object(framework.ctypes, "CDLL", side_effect=OSError("boom")),
+            self.assertRaises(framework.ControlUnitLoadError),
+        ):
+            framework.ensure_relative_move_support(log=lambda _m: None)
+
+    def test_control_unit_so_raises_when_dso_missing(self) -> None:
+        """装了 maa 但缺 DSO：必须响亮失败（静默降级会让人以为是能力不支持）。"""
+        fake_maa = types.ModuleType("maa")
+        fake_maa.__file__ = "/nonexistent/maa/__init__.py"
+        with (
+            mock.patch.object(framework.sys, "platform", "linux"),
+            mock.patch.dict(sys.modules, {"maa": fake_maa}),
+            self.assertRaises(framework.ControlUnitLoadError),
+        ):
+            framework._control_unit_so()
+
+    def test_deprecated_alias_forwards(self) -> None:
+        """旧入口 ensure_preload 仍然可用（外部脚本还在用）。"""
+        with mock.patch.object(framework, "ensure_relative_move_support") as impl:
+            framework.ensure_preload(log=lambda _m: None)
+        impl.assert_called_once()
 
 
 class SocketTest(unittest.TestCase):

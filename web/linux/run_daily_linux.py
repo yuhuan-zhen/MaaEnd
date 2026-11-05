@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from maaend_web.cli.daily import log, main
 from maaend_web.config import TASK_TIMEOUTS, load_settings
-from maaend_web.framework import ensure_preload, find_wlr_socket
+from maaend_web.framework import ensure_preload, ensure_relative_move_support, find_wlr_socket
 from maaend_web.framework import make_controller as _make_controller
 from maaend_web.framework import start_agent as _start_agent
 from maaend_web.framework import start_agents as _start_agents
@@ -57,6 +57,7 @@ __all__ = [
     "TIMEOUTS",
     "WEB",
     "ensure_preload",
+    "ensure_relative_move_support",
     "find_wlr_socket",
     "log",
     "main",

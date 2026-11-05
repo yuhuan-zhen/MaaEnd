@@ -14,6 +14,7 @@
 """
 
 import contextlib
+import ctypes
 import json
 import os
 import subprocess
@@ -29,6 +30,19 @@ Log = Callable[[str], None]
 # 控制单元 DSO 名：新框架（含 scroll / relative_move 的版本）用 boost::dll 加载它。
 PRELOAD_SO = "libMaaLinuxControlUnit.so"
 
+# ensure_relative_move_support 是否已跑过（幂等闸门）
+_control_unit_ready = False
+
+# RTLD_* 只在 POSIX 上存在；Windows 既没有这两个常量，也不会走到这条路径
+# （ensure_relative_move_support 先判 sys.platform），取 0 只为避免导入期 AttributeError。
+_RTLD_GLOBAL = getattr(ctypes, "RTLD_GLOBAL", 0)
+_RTLD_FLAGS = _RTLD_GLOBAL | getattr(ctypes, "RTLD_NOW", 0)
+
+
+class ControlUnitLoadError(RuntimeError):
+    """控制单元 DSO 不可用 —— relative_move / scroll 必然失败。"""
+
+
 CONTROLLER_WLROOTS = "wlroots"
 CONTROLLER_CDP = "cdp"
 CONTROLLER_KINDS = (CONTROLLER_WLROOTS, CONTROLLER_CDP)
@@ -37,34 +51,100 @@ CONTROLLER_KINDS = (CONTROLLER_WLROOTS, CONTROLLER_CDP)
 CPP_ALGO = "cpp-algo"
 
 
-def ensure_preload(log: Log = print) -> None:
-    """把 Linux 控制单元预加载成全局符号；参数没设就带上它重新 exec 自己。
+def _control_unit_so() -> Path | None:
+    """``bin/libMaaLinuxControlUnit.so`` 的绝对路径。
 
-    新框架用 boost::dll 加载控制单元，默认 RTLD_LOCAL：RelativeMovableUnit 的
-    typeinfo 在框架和控制单元两个 DSO 里各存一份，跨库 dynamic_cast 直接失败，
-    日志表现为 `Relative move is not supported for this controller type`。
-    用 LD_PRELOAD 提前把控制单元加载为全局符号即可解决，所以在进程启动时自愈：
-    参数没设就带上它重新 exec 自己。
+    三种情况必须分开，不能混成一个 None：
+
+    * 没装 maa（``--help`` / ``--dry-run`` / 离线单测）→ ``None``，调用方跳过
+    * 装了 maa 但没有这个 DSO → 抛 :class:`ControlUnitLoadError`（装坏了，不能装没事）
+    * 正常 → 返回路径
     """
-    so = _preload_so()
-    if not so:
-        return
-    cur = os.environ.get("LD_PRELOAD", "")
-    if PRELOAD_SO in cur:
-        return
-    os.environ["LD_PRELOAD"] = (so + ":" + cur) if cur else so
-    log("  (为 relative_move/scroll 预加载控制单元，重新 exec)")
-    os.execv(sys.executable, [sys.executable, *sys.argv])
-
-
-def _preload_so() -> str | None:
-    """libMaaLinuxControlUnit.so 的绝对路径；没装框架或没有该 DSO 时返回 None。"""
     try:
         import maa
     except Exception:  # 没有框架的机器：--help/--dry-run 照常走
         return None
+
+    if sys.platform != "linux":  # 这个 DSO 只在 Linux 发行包里存在
+        return None
+
     so = Path(os.path.dirname(getattr(maa, "__file__", "") or "")) / "bin" / PRELOAD_SO
-    return str(so) if so.exists() else None
+    if not so.is_file():
+        raise ControlUnitLoadError(
+            f"{so} 不存在：relative_move/scroll 会全部失败"
+            f"（日志表现为 'Relative move is not supported for this controller type'）。"
+            f"检查 maa 安装是否完整（bin 目录应有 MaaLinuxControlUnit 相关 DSO）。"
+        )
+    return so
+
+
+def ensure_relative_move_support(log: Log = print) -> None:
+    """把控制单元 DSO 以 RTLD_GLOBAL 预加载进本进程，只对 Linux 有意义。
+
+    为什么需要：MaaFramework 的 Linux 包用 libc++ 编译，``RelativeMovableUnit`` /
+    ``ScrollableUnit`` 这类能力 mixin 的 typeinfo 在框架和控制单元两个 DSO 里各存一份，
+    跨库 ``dynamic_cast`` 按地址比较因而失败，``relative_move`` / ``scroll`` 会被判成
+    「不支持」。先把控制单元以 GLOBAL 加载，全局就只剩一份 typeinfo，cast 能过。
+
+    何时调用：第一次构造 ``LinuxController`` 之前。**不必早于 ``import maa``** ——
+    glibc 会把已 LOCAL 加载的库提升为 GLOBAL。
+
+    幂等；成功与「不适用」都只记一行日志，真正的失败抛 :class:`ControlUnitLoadError`。
+    """
+    global _control_unit_ready
+    if _control_unit_ready:
+        return
+
+    if sys.platform != "linux":
+        _control_unit_ready = True
+        return
+
+    if PRELOAD_SO in os.environ.get("LD_PRELOAD", ""):
+        _control_unit_ready = True
+        log(f"  {PRELOAD_SO} 已由 LD_PRELOAD 加载，跳过预加载")
+        return
+
+    so = _control_unit_so()
+    if so is None:
+        _control_unit_ready = True
+        return
+
+    try:
+        ctypes.CDLL(str(so), mode=_RTLD_FLAGS)
+    except OSError as exc:
+        raise ControlUnitLoadError(f"无法以 RTLD_GLOBAL 加载 {so}: {exc}") from exc
+
+    _control_unit_ready = True
+    log(f"  已把 {so.name} 载入全局符号（relative_move/scroll 依赖）")
+
+
+def ensure_preload(log: Log = print) -> None:
+    """已废弃：现在不重新 exec 自己，改用进程内 RTLD_GLOBAL。保留旧名给外部脚本。"""
+    ensure_relative_move_support(log)
+
+
+def probe_relative_move(ctrl: Any, log: Log = print) -> None:
+    """控制器连上后自检一次 ``relative_move(0, 0)``。
+
+    失败说明能力链断了（typeinfo 分裂 / input_method=None / DSO 没加载），
+    现在报错远好过任务跑到转视角才发现。``(0, 0)`` 在 Wlr 下就是一次无位移的
+    指针移动，无副作用。
+    """
+    try:
+        import maa  # noqa: F401  仅用于判断「框架在不在」
+    except Exception:  # 没有框架：无事可做
+        return
+
+    job = ctrl.post_relative_move(0, 0)
+    if job.wait().status.succeeded:
+        return
+
+    raise ControlUnitLoadError(
+        "relative_move 不可用（post_relative_move 失败）。依次检查："
+        "(1) libMaaLinuxControlUnit.so 是否以 RTLD_GLOBAL 加载；"
+        "(2) input_method 是否为 1/3/4（NoneInput 不支持）；"
+        "(3) 日志里是否出现 'Relative move is not supported for this controller type'。"
+    )
 
 
 def find_wlr_socket(env: Mapping[str, str] | None = None) -> str:

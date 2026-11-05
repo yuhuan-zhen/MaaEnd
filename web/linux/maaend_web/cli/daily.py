@@ -26,8 +26,10 @@ from maaend_web.framework import (
     CONTROLLER_CDP,
     CONTROLLER_KINDS,
     CONTROLLER_WLROOTS,
-    ensure_preload,
+    ControlUnitLoadError,
+    ensure_relative_move_support,
     make_controller,
+    probe_relative_move,
     setup_tasker,
     start_agents,
     stop_agents,
@@ -106,9 +108,14 @@ def main(argv: list[str] | None = None) -> int:
     """日常编排入口：解析参数 -> 选任务 -> 起资源/控制器/agent -> 跑 -> 汇总。"""
     args = build_parser().parse_args(argv)
 
-    # 必须在跑任务前完成：ensure_preload 会在需要时带 LD_PRELOAD 重新 exec 自己。
+    # 必须在构造 LinuxController 之前完成：把控制单元 DSO 以 RTLD_GLOBAL 预加载，
+    # 否则 libc++ 的跨 DSO dynamic_cast 会让 relative_move/scroll 失效。
     # 放在 parse_args 之后，是为了 `--help` 不 import maa（无框架的机器也能看帮助）。
-    ensure_preload(log)
+    try:
+        ensure_relative_move_support(log)
+    except ControlUnitLoadError as e:
+        # 装坏了：立刻停，不要跑到一半才发现转不了视角
+        raise SystemExit(str(e)) from None
 
     try:
         inst, plan = _select(args)
@@ -235,6 +242,15 @@ def _connect_controller(kind: str, settings: Any) -> Any:
         conn = _is_connected(ctrl)
         log(f"控制器: {kind} connected={conn}")
         if conn:
+            if kind == CONTROLLER_WLROOTS:
+                # 转视角能力自检：失败只告警不阻断 —— 不需要 relative_move 的任务照跑，
+                # 需要时（地图导航）日志里早有明确根因，而不是等到任务跑一半才看到
+                # 「Relative move is not supported」。
+                try:
+                    probe_relative_move(ctrl, log)
+                    log("  relative_move 自检通过")
+                except ControlUnitLoadError as e:
+                    log(f"[!] {e}")
             return ctrl
         if kind != CONTROLLER_CDP:
             return None
