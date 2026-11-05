@@ -36,7 +36,12 @@ _control_unit_ready = False
 # RTLD_* 只在 POSIX 上存在；Windows 既没有这两个常量，也不会走到这条路径
 # （ensure_relative_move_support 先判 sys.platform），取 0 只为避免导入期 AttributeError。
 _RTLD_GLOBAL = getattr(ctypes, "RTLD_GLOBAL", 0)
-_RTLD_FLAGS = _RTLD_GLOBAL | getattr(ctypes, "RTLD_NOW", 0)
+# ctypes 只导出 RTLD_GLOBAL / RTLD_LOCAL，RTLD_NOW 没有公开属性（它只在 CDLL 的
+# DEFAULT_MODE 里用），但 Linux 上恒为 2（glibc 与 musl 一致）。必须显式写出：
+# 少了这一位，mode 会退化成 RTLD_LAZY，控制单元的未定义符号要等到第一次调用才炸，
+# 而不是 dlopen 时报错——正是「装坏了要立刻知道」想避免的情况。
+_RTLD_NOW = 2
+_RTLD_FLAGS = _RTLD_GLOBAL | _RTLD_NOW
 
 
 class ControlUnitLoadError(RuntimeError):

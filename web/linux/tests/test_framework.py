@@ -6,7 +6,6 @@
 跑法：``python -m unittest discover -s web/linux/tests -v``（在仓库根）。
 """
 
-import ctypes
 import json
 import os
 import subprocess
@@ -104,8 +103,13 @@ class RelativeMoveSupportTest(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform == "linux", "RTLD_* 只在 POSIX 上存在")
     def test_rtld_flags_are_global_and_now(self) -> None:
-        """在真正会跑这段代码的平台上，确认标志就是 RTLD_GLOBAL|RTLD_NOW。"""
-        self.assertEqual(framework._RTLD_FLAGS, ctypes.RTLD_GLOBAL | ctypes.RTLD_NOW)
+        """确认标志是 RTLD_GLOBAL|RTLD_NOW，不能少了 NOW 退化成 LAZY。
+
+        不能写 ``ctypes.RTLD_NOW``：ctypes 没导出这个常量（只在内部 DEFAULT_MODE
+        里用），Linux 上访问它会 AttributeError。数值是 POSIX 固定的：GLOBAL=0x100，
+        NOW=0x2（glibc 与 musl 一致）。
+        """
+        self.assertEqual(framework._RTLD_FLAGS, 0x100 | 0x2)
 
     def test_idempotent(self) -> None:
         so = Path("/opt/maa/lib/libMaaLinuxControlUnit.so")
