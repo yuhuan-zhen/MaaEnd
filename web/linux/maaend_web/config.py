@@ -88,9 +88,21 @@ def _default_root(env: Mapping[str, str]) -> Path:
 
 
 def _default_resource_dirs(root: Path, web: Path) -> tuple[Path, ...]:
-    """列出发行版与三份覆盖层资源目录，只保留真实存在的那些（缺失的由 runtime 记一行提示后跳过）。"""
+    """列出发行版与各覆盖层资源目录，只保留真实存在的那些（缺失的由 runtime 记一行提示后跳过）。
+
+    两套布局都要列，迁移期不能只认一边：
+
+    * 新布局（``deploy.sh`` 把 ``assets/*`` 拍平到安装根）：``resource`` / ``resource_cloud``
+      / ``resource_cloud_web``。云层与网页端薄覆盖层都挂在安装根下。
+    * 旧布局（仓库内 ``web/`` 下）：``resource_web`` / ``resource_web_homesrv`` /
+      ``resource_web_linux``。homesrv 现有部署仍是这一套，删掉会让它跑不起来。
+
+    顺序即加载顺序，后加载的覆盖先加载的：发行版 → 云层 → 网页端薄覆盖 → 旧布局覆盖。
+    """
     candidates = (
         root / "resource",
+        root / "resource_cloud",
+        root / "resource_cloud_web",
         web / "resource_web",
         web / "linux" / "resource_web_linux",
         web / "resource_web_homesrv",
