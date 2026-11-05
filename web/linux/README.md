@@ -38,6 +38,32 @@ core     maaend_web/*.py           纯逻辑：配置、预设、计划、结果
 | `tests/` | `test_*.py` + `*.test.mjs`，全部离线可跑 |
 | `resource_web_linux/` | 网页端 Linux 层模板覆盖：字体光栅化与 Windows 不同，同一个按钮要在 Linux 帧上重抠（现在只剩 `WebStartGame/StartButton.png`） |
 
+## 系统依赖
+
+发行版本身只需要 Python，但两条控制器路径各有额外的**系统库**要求；新机器上缺了会在
+启动阶段报 `cannot open shared object file`。以下都是实测结论：
+
+| 依赖 | 谁需要 | 装法 | 缺失时的表现 |
+|---|---|---|---|
+| `libpipewire-0.3.so.0` | wlroots 控制单元 | `dnf install pipewire-libs` / `apt install libpipewire-0.3-0` | `libMaaLinuxControlUnit.so` dlopen 失败 |
+| `libei.so.1` | wlroots 控制单元 | `apt install libei1`；**RHEL 8 系与 EPEL 8 都没有**，需 RHEL 9+ / Ubuntu 24.04+ | 同上，`ControlUnitLoadError` 会点名这个库 |
+| `libMaaFramework.so`、`libonnxruntime.so.1` | go-service | 随 MaaFw wheel 提供，铺到 `agent/maafw/` | agent 起来后立刻 FTL 退出，`agent connect` 一直卡住 |
+| `libc++.so.1`、`libc++abi.so.1` | cpp-algo | **只有官方 Linux release 的 `maafw/` 目录带** | `cpp-algo: error while loading shared libraries` |
+| Chrome / Chromium | cdp 控制器 | 任何支持 `--remote-debugging-port` 的构建 | `URLError: Connection refused` → `screencap failed` |
+| OpenCV 3.x+ | 仅 cpp-algo 源码编译 | `dnf install opencv-devel` | 链接失败 |
+
+两个容易连踩两遍的点：
+
+- **`*.so` 通配符抓不到带版本号的库**。`libonnxruntime.so.1`、`libc++.so.1` 这类只有
+  `*.so*` 能匹配上；漏了它们，agent 启动时一次只报第一个缺失项，修一个冒一个。
+- **cpp-algo 不用系统 libc++ 编译**。MaaUtils 的 `config.cmake` 强制找 `libc++.so.1`，
+  并用 clang 的 `-target` 参数（g++ 直接报 `unrecognized command-line option '-target'`），
+  而 RHEL 8 系没有 `libcxx-devel`。直接取官方 Linux release 里的预编译 `agent/cpp-algo`
+  并让 `agent/maafw/` 用该 release 自带的那份库，比在本地凑工具链省事得多。
+
+Python：`requires-python` 声明 `>=3.14`，但实测 **3.11 即可跑通全部离线单测**
+（代码只用到 3.10 的 `X | None` 写法）。只能装到 3.11 的发行版不必为此折腾。
+
 ## 部署脚本
 
 | 脚本 | 作用 |
@@ -88,7 +114,8 @@ bash web/linux/homesrv/essence_run_homesrv.sh
 | `MAA_LOG_DIR` | `~/maaend-log` | 框架日志目录，必须可写 |
 | `MAA_AGENT_BIN` | `<root>/agent/go-service` | go-service 可执行文件 |
 | `MAA_AGENT_LIB` | `<agent>/maafw` | agent 的 `LD_LIBRARY_PATH` |
-| `MAAEND_WEB_CDP_PORT` | `9334` | Chrome DevTools 端口 |
+| `MAAEND_WEB_CDP_PORT` | 自动 | Chrome DevTools 端口；未设置时先用 9334，被占用则由 Chrome 自选并写入 `$PROFILE/.maaend_cdp_port`（Python 与 shell 都读这个文件） |
+| `MAAEND_SESSION_TAG` | `endfield-web` | 浏览器进程标记（`--maaend-session=`）；收尾按它精确匹配，多实例互不误杀 |
 | `WLR_SOCKET` | 自动探测 | wayland socket；按 `XDG_RUNTIME_DIR` → `/tmp/xdg-run/wayland-1` → `/run/user/<uid>/wayland-1` 顺序找 |
 
 部署脚本另读：`MAAEND_TASKS`（临时覆盖任务列表）、`MAAEND_PROFILE`（Chrome profile）、`MAAEND_CHROME`（浏览器路径）、`MAAEND_ESSENCE_OK` / `MAAEND_ESSENCE_MAX` / `MAAEND_ESSENCE_SLEEP`（基质链的成功轮数、尝试上限、重试间隔）。
@@ -110,6 +137,7 @@ node --test web/linux/tests/*.test.mjs
 - 指针累计到视口边缘后 `post_relative_move` 仍返回成功但画面不动，长时间任务前需要回中。
 - Chrome 用 SwiftShader 软渲染，2560×1440 会让 gpu-process 跑到 599% CPU；720p 约 79%。
 - 截图长边被 MaaFramework 缩到 1280，模板必须按 1280×720 标；`set_screenshot_target_long_side()` 可改，但要重标模板。
+- 取帧失败没有退避：框架按固定间隔立即重试。无游戏画面时实测 80 秒内重试 8 万次、写出 40 MB 日志，长时间空转会写满磁盘——外层要配日志轮转。
 
 ## 相关文档
 
