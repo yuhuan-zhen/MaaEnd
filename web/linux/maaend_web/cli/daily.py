@@ -108,14 +108,16 @@ def main(argv: list[str] | None = None) -> int:
     """日常编排入口：解析参数 -> 选任务 -> 起资源/控制器/agent -> 跑 -> 汇总。"""
     args = build_parser().parse_args(argv)
 
-    # 必须在构造 LinuxController 之前完成：把控制单元 DSO 以 RTLD_GLOBAL 预加载，
-    # 否则 libc++ 的跨 DSO dynamic_cast 会让 relative_move/scroll 失效。
-    # 放在 parse_args 之后，是为了 `--help` 不 import maa（无框架的机器也能看帮助）。
-    try:
-        ensure_relative_move_support(log)
-    except ControlUnitLoadError as e:
-        # 装坏了：立刻停，不要跑到一半才发现转不了视角
-        raise SystemExit(str(e)) from None
+    # 只有 wlroots 才需要控制单元的 relative_move / scroll：cdp 走 <video> 原生帧
+    # 加 CDP 输入，根本不加载 LinuxController（见 framework.make_controller 的分支）。
+    # 无条件预加载会把调试对照路径也挡在 DSO 的系统依赖之外——缺 libei/pipewire 的机器
+    # 上连「只想用 cdp 看看」都跑不起来。放在 parse_args 之后，是为了 --help 不 import maa。
+    if args.controller == CONTROLLER_WLROOTS:
+        try:
+            ensure_relative_move_support(log)
+        except ControlUnitLoadError as e:
+            # 装坏了：立刻停，不要跑到一半才发现转不了视角
+            raise SystemExit(str(e)) from None
 
     try:
         inst, plan = _select(args)
