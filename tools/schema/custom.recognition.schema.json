@@ -6,12 +6,15 @@
         "custom_recognition": {
             "enum": [
                 "AutoFightEntryRecognition",
+                "AutoMissionMatchQuest",
                 "AeroSalvageBalloonStateRecognition",
                 "AeroSalvageGridRecognition",
                 "AeroSalvageInitialStateRecognition",
+                "ArenaOfGames.CheckHand",
                 "AutoSellPriceCompareRecognition",
                 "AutoSellScanItemRecognition",
                 "AutoStockpile.Recognition",
+                "BatchAddFriendsStrangersPickRowRecognition",
                 "EssenceFilterAfterBattleNthRecognition",
                 "EssenceGridAdvanceRecognition",
                 "EssenceGridPendingRecognition",
@@ -45,6 +48,7 @@
                 "ScreenshotStableRecognition",
                 "ScrollbarRecognition",
                 "ScrollbarCompleteRecognition",
+                "TextInputExhaustedRecognition",
                 "TrialOfSwordmancy.Recognize",
                 "TrialOfSwordmancy.RecognizeAband",
                 "TrialOfSwordmancy.RecognizeDeck",
@@ -56,6 +60,31 @@
         }
     },
     "allOf": [
+        {
+            "if": {
+                "type": "object",
+                "required": [ "custom_recognition" ],
+                "properties": {
+                    "custom_recognition": { "const": "ArenaOfGames.CheckHand" }
+                }
+            },
+            "then": {
+                "type": "object",
+                "properties": {
+                    "custom_recognition_param": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "count": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 5
+                            }
+                        }
+                    }
+                }
+            }
+        },
         {
             "if": {
                 "type": "object",

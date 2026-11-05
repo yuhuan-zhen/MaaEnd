@@ -19,7 +19,8 @@
     "description": "$description.file",
     "telemetry": {
         "sentry": {
-            "dsn": "https://bd7fd739c3764eb264d3bfbb298cb56b@o4511806947065856.ingest.us.sentry.io/4511806958665728"
+            "dsn": "https://bd7fd739c3764eb264d3bfbb298cb56b@o4511806947065856.ingest.us.sentry.io/4511806958665728",
+            "failure_attachments_sample_rate": 0.003
         }
     },
     "controller": [
@@ -53,15 +54,14 @@
             "type": "Adb",
             "attach_resource_path": [
                 "./resource_adb",
-                "./resource_cloud_adb"
+                "./resource_cloud"
             ]
         },
         {
             "name": "PlayCover",
             "type": "PlayCover",
             "attach_resource_path": [
-                "./resource_adb",
-                "./resource_playcover"
+                "./resource_adb"
             ],
             "playcover": {
                 "uuid": "maa.playcover"
@@ -204,6 +204,7 @@
     "import": [
         // pretask
         "tasks/pretasks/LaunchGamePC.json",
+        "tasks/pretasks/LaunchGamePlayCover.json",
         // group: regional_development
         "tasks/OutpostTrading.json",
         "tasks/SeizeDeliveryJobs.json",
@@ -216,11 +217,13 @@
         "tasks/GearAssembly.json",
         "tasks/Weapon.json",
         "tasks/BatchUseDetector.json",
+        "tasks/SanityExtractor.json",
         "tasks/EssenceFilter.json",
         "tasks/DecomposeWeaponEssence.json",
         // group: open_world
         "tasks/ResourceRecycleStation.json",
         "tasks/AutoCollect.json",
+        "tasks/AutoMission.json",
         "tasks/AutoEcoFarm.json",
         "tasks/PuzzleSolver.json",
         "tasks/SwitchTeam.json",
@@ -245,6 +248,7 @@
         "tasks/AutoEssence/Location/WLYinglungPass.json",
         "tasks/AutoEssence/Location/WLNorthWulingExclusionZone.json",
         "tasks/AutoEssence/Location/WLSnowyForest.json",
+        "tasks/AutoEssence/Location/WLSisPainting.json",
         "tasks/AutoEssence/Target/Target.json",
         "tasks/ProtocolSpace.json",
         // group: dijiang_ship
@@ -257,10 +261,15 @@
         "tasks/PullCountCalculator.json",
         "tasks/BakerEntry.json",
         "tasks/ReadAllWiki.json",
+        "tasks/RestaurantDaily.json",
         "tasks/IntelArchive.json",
         "tasks/DailyRewards.json",
+        "tasks/LevelUpOperator.json",
         "tasks/ClaimSimulationRewards.json",
         "tasks/TrialOfSwordmancy.json",
+        "tasks/UmbralMonument.json",
+        "tasks/WarEcho.json",
+        "tasks/ArenaOfGames.json",
         "tasks/CreditShopping.json",
         "tasks/AccountSwitch.json",
         "tasks/LaunchGameLinux.json",
@@ -270,6 +279,7 @@
         "tasks/AndroidOpenGame.json",
         "tasks/CloseGame.json",
         "tasks/CloseGamePC.json",
+        "tasks/CloseGamePlayCover.json",
         // group: realtime
         "tasks/RealTimeTask.json",
         // group: backpack
@@ -278,10 +288,12 @@
         "tasks/SimpleProductionBatchStart.json",
         "tasks/ReceiveProdManual.json",
         "tasks/StashBackpack.json",
+        "tasks/UseConsumable.json",
         // preset
         "tasks/preset/DailyFull.json",
         "tasks/preset/QuickDaily.json",
         "tasks/preset/RealtimeAssist.json",
+        "tasks/preset/IndependentTasks.json",
         // setting
         "tasks/setting/Keymap.json",
         "tasks/setting/Zipline.json"

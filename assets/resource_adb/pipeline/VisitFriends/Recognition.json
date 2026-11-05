@@ -52,5 +52,21 @@
             110,
             83
         ]
+    },
+    "VisitFriendsQuickVisitNextClue": {
+        "roi_offset": [
+            -10,
+            25,
+            0,
+            0
+        ]
+    },
+    "VisitFriendsRecognitionItemEnterButtonByNamePriority": {
+        "roi_offset": [
+            802,
+            -8,
+            110,
+            83
+        ]
     }
 }

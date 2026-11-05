@@ -14,7 +14,7 @@ There are **2 recognitions + 3 actions**:
 
 Codes `A1` / `A2` / `A3` and `R1` / `R2` only reflect implementation order, not priority. **A2 was the second action written, but it is the core of IMS.**
 
-On-disk path: `debug/record/IMS.json` (relative to the working directory go-service was started in, resolved by `fsutil.OutputPath`).
+On-disk path: `debug/record/IMS.json` (in the user data directory given by `PI_USER_DATA_DIR`, or the install root when the variable is absent; resolved by `fsutil.UserDataPath`).
 
 ---
 
@@ -55,7 +55,7 @@ Do not skip the entry because “the cache should still be fine”, and do not r
 
 ### Parameters (IconRecognition IDs)
 
-Cache keys and recognition IDs all use [`IconRecognition`](./icon-recognition.md) catalog top-level keys (for example `item_char_break_stage_1_2`). IMS does **not** keep an item allowlist: whatever is scanned on screen is cached/announced.
+Cache keys and recognition IDs all use [`IconRecognition`](./icon-recognition.md) catalog top-level keys (for example `item_char_break_stage_1_2`). IMS does **not** keep a cache item allowlist: every scanned item is cached; `report_item_ids` can filter the UI summary separately.
 
 | Field | Meaning |
 | --- | --- |
@@ -68,6 +68,7 @@ Cache keys and recognition IDs all use [`IconRecognition`](./icon-recognition.md
 | `page_dedup` | Distinguishes the first page from continuation pages together with `merge_mode`; see below |
 | `transaction_mode` | Optional TaskID-scoped staging: `begin` starts and scans, `continue` scans into the same stage, and `commit` skips recognition and publishes the completed stage. Omit for immediate persistence |
 | `notify_ui` | Whether to announce hits; defaults to `true`. After each scan, emit one icon HTML summary; scan stages summarize per page, while `commit` summarizes final deduplicated quantities for items hit by the transaction |
+| `report_item_ids` | Optional item IDs to include in the report; omit or pass an empty list to announce all hits. Filters only this call's UI summary, preserving recognition, inventory cache, and persistence; transaction `commit` uses that call's list |
 
 Provide `grid_type` (IconRecognition scan) and/or `items`. Shop-only OCR entries may pass only `items` (e.g. `item_originium_recharge` / `item_diamond`). Keys in `items` always join the `merge_mode: replace` + `page_dedup=false` region rebuild (miss removes the ID).
 
@@ -186,7 +187,7 @@ With a cache it also prints one summary; no Pipeline Starting/Succeeded Focus is
 >
 > Reference Pipeline: `AddItemDataOnRewards` → `AddItemDataCloseRewards`.
 >
-> Close-reward paths already wired to A3: `SceneNoticeRewardsConfirm` (Claim Daily Rewards, etc.), `DijiangRewardsFastCollectAddItemData` (base Fast Collect, separate candidates), `CreditShoppingClaimConfirm` (Credit Shop: Oroberyl / T-Creds / Arsenal Ticket / Credits + `ValuableDepot:SpecialItem`), `MFGCabinClaimRewardClose`, `GrowthChamberClaimRewardClose`, `SceneNoticeRewardsConfirmWithAnchor`, `ReceptionRoomSendCluesQuickGiveClose` (Reception Room quick gift), `AutoDeliveryCloseRewardDialog` (automatic delivery), `ProtocolSpaceRewardAddItemData` (Protocol Space), `TrialOfSwordmancyFightSuccess` (Trial of Swordmancy).
+> Close-reward paths already wired to A3: `SceneNoticeRewardsConfirm` (Claim Daily Rewards, etc.), `DijiangRewardsFastCollectAddItemData` (base Fast Collect, separate candidates), `CreditShoppingClaimConfirm` (Credit Shop: Oroberyl / T-Creds / Arsenal Ticket / Credits + `ValuableDepot:SpecialItem`), `MFGCabinClaimRewardClose`, `GrowthChamberClaimRewardClose`, `SceneNoticeRewardsConfirmWithAnchor`, `ReceptionRoomSendCluesQuickGiveClose` (Reception Room quick gift), `AutoDeliveryCloseRewardDialog` (automatic delivery), `ProtocolSpaceRewardAddItemData` (Protocol Space), `TrialOfSwordmancyFightSuccess` (Trial of Swordmancy), `AutoStockStapleQuantityControlCloseRewards` (stable-material purchase: `Normal:Usable` + `ValuableDepot:CommercialItem` + `ValuableDepot:SpecialItem`, replacing the old “Buy X” Focus broadcast on each item's buy node).
 
 ---
 

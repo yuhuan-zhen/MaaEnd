@@ -14,7 +14,7 @@ IMS（Item Management System）在 go-service 进程内维护培养道具等物�
 
 代号 `A1` / `A2` / `A3`、`R1` / `R2` 只表示实现顺序，不表示优先级。其中 **A2 虽是第二个写的动作，却是整个 IMS 的核心**。
 
-落盘路径：`debug/record/IMS.json`（相对 go-service 启动时的工作目录，由 `fsutil.OutputPath` 解析）。
+落盘路径：`debug/record/IMS.json`（位于 `PI_USER_DATA_DIR` 指定的用户数据目录，未注入时为安装根目录，由 `fsutil.UserDataPath` 解析）。
 
 ---
 
@@ -55,7 +55,7 @@ A2 负责「看一眼当前界面，把物品数量记下来」。业务侧**不
 
 ### 参数（IconRecognition ID）
 
-缓存键与识别 ID 统一使用 [`IconRecognition`](./icon-recognition.md) catalog 顶层 key（如 `item_char_break_stage_1_2`）。IMS **不**维护物品白名单：屏上扫到什么就缓存/播报什么。
+缓存键与识别 ID 统一使用 [`IconRecognition`](./icon-recognition.md) catalog 顶层 key（如 `item_char_break_stage_1_2`）。IMS **不**维护缓存物品白名单：屏上扫到什么就缓存什么；UI 汇总可通过 `report_item_ids` 单独选择播报物品。
 
 | 字段 | 说明 |
 | --- | --- |
@@ -68,6 +68,7 @@ A2 负责「看一眼当前界面，把物品数量记下来」。业务侧**不
 | `page_dedup` | 配合 `merge_mode` 区分首页面与后续页面，见下表 |
 | `transaction_mode` | 可选的 TaskID 级暂存：`begin` 开始并扫描、`continue` 继续扫描、`commit` 不识别画面而只提交完整 staging；省略时保持扫描后立即落盘 |
 | `notify_ui` | 是否播报命中物品；默认 `true`。扫描结束后输出一条带图标的 HTML 汇总；事务扫描阶段按页汇总，`commit` 则汇总本事务实际命中物品的最终去重数量 |
+| `report_item_ids` | 可选的播报物品 ID 列表；省略或空列表保持全部播报。仅过滤本次调用的 UI 汇总，不影响识别、库存缓存或落盘；事务 `commit` 使用该次调用的列表 |
 
 提供 `grid_type`（IconRecognition 扫库）与 `items` 至少其一。采购中心等可只传 `items`（如 `item_originium_recharge` / `item_diamond`）。`items` 里的键在 `merge_mode: replace` 且 `page_dedup=false` 时一律参与地区重建（未命中则从缓存删除）。
 
@@ -186,7 +187,7 @@ A3 **不要求 IMS 缓存已经存在**。
 >
 > 参考 Pipeline：`AddItemDataOnRewards` → `AddItemDataCloseRewards`。
 >
-> 已接入 A3 的关闭奖励路径：`SceneNoticeRewardsConfirm`（日常奖励等）、`DijiangRewardsFastCollectAddItemData`（基建快速收取，独立候选）、`CreditShoppingClaimConfirm`（信用商店：玉/折金票/武库配额/信用 + `ValuableDepot:SpecialItem`）、`MFGCabinClaimRewardClose`、`GrowthChamberClaimRewardClose`、`SceneNoticeRewardsConfirmWithAnchor`、`ReceptionRoomSendCluesQuickGiveClose`（会客室快速赠予）、`AutoDeliveryCloseRewardDialog`（自动送货）、`ProtocolSpaceRewardAddItemData`（协议空间）、`TrialOfSwordmancyFightSuccess`（选剑演武）。
+> 已接入 A3 的关闭奖励路径：`SceneNoticeRewardsConfirm`（日常奖励等）、`DijiangRewardsFastCollectAddItemData`（基建快速收取，独立候选）、`CreditShoppingClaimConfirm`（信用商店：玉/折金票/武库配额/信用 + `ValuableDepot:SpecialItem`）、`MFGCabinClaimRewardClose`、`GrowthChamberClaimRewardClose`、`SceneNoticeRewardsConfirmWithAnchor`、`ReceptionRoomSendCluesQuickGiveClose`（会客室快速赠予）、`AutoDeliveryCloseRewardDialog`（自动送货）、`ProtocolSpaceRewardAddItemData`（协议空间）、`TrialOfSwordmancyFightSuccess`（选剑演武）、`AutoStockStapleQuantityControlCloseRewards`（稳定物资购买：`Normal:Usable` + `ValuableDepot:CommercialItem` + `ValuableDepot:SpecialItem`，取代原先各物品买节点上的「购买 XXX」Focus 播报）。
 
 ---
 

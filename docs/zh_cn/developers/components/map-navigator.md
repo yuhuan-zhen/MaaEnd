@@ -179,7 +179,7 @@ uv run map-navigator --port 9000 --no-browser
 
 ### 适用边界
 
-`NAVMESH` 只负责移动，不推断业务语义。路线中包含交互、过图、跳台、外力传送时，需要在 `path` 中显式标注，此时应使用下节的录制方式。
+`NAVMESH` 只负责移动，不推断业务语义。路线中包含交互、过图、跳台、外力传送时，需要在 `path` 中显式标注，此时应使用下节的录制方式。升降索是唯一的例外：规划器会自己接上一开始就放下的升降索并插入交互，见 [升降索](#升降索)。
 
 ---
 
@@ -224,13 +224,13 @@ uv run map-navigator --port 9000 --no-browser
 - 路线规划：地图顶部工具条的 `两点测线`（快速测试）可直接验证任意两点。第一次单击设置临时 `S`，第二次设置临时 `G` 并自动按运行时语义规划，第三次单击从新的 `S` 重新开始；`Esc`、`Delete` 或 `清除线路` 会清除临时点与结果。分层底图上的终点自动携带当前 `target_tier`。临时 S/G 不进入作者 `path`、撤销栈、复制结果或实机试跑。作者路径预览默认以当前片段的第一个作者路点为起点。需要测试角色从其他位置出发并继续经过作者路点时，点击侧栏 `NavMesh起点` 一栏的 `地图点选`，在同一区域的地图上取点，取点完成会自动恢复此前的编辑工具。青色 `S` 只作为当前片段的规划起点，不会写入或导出到作者 `path`，因此也可以用一个作者路点直接测试“起点到目标”的规划。在添加/选择或框选工具下可以选中并拖动 `S`，按 `Delete` 或工具条上的 `删除` 可移除。单击作者路点或规划起点时，地图右上角会显示其动作、坐标、层级、目标面等详情。勾选 `自动展开`（默认）时，路点或起点变化后会自动规划当前片段，也可点击 `重新展开` 立即规划；规划结果中，粉色折线显示运行时展开的步行段，青色有向边显示选中的滑索跳；展开 `图层` 面板中的「寻路诊断」可分别显示「拓扑逐格路径」「几何紧绷折线」「取直后折线」「端点拼接与去冗」各阶段，最终路线由同一面板的「最终计划路径」控制。诊断只包含完整展开最终采用的步行段，不包含失败的全局直达尝试或未选中的步行基线。失败时状态栏会标明失败的作者路点，并显示起终点离网、端点不连通、指定目标面不可达或 navmesh 加载失败等运行时原始原因；若起终点落在两个不连通的可达区域，地图会自动聚焦并用红色虚线连接两侧最近的边界点，同时标出断口距离。无法取得精细断口时才回退标出整条失败腿；离网端点仍保留琥珀色距离标记。
 - 快速测试清理：主动切换到其他编辑工具，或切到 `断言` / `日志分析` 时，会清除临时 S/G 与规划结果；切到 `禁区` 时两者保留，回到路径编辑后仍显示；按住 `Alt` 临时平移不算离开，松开后仍回到快速测试。
 - 实机轨迹：试跑时「实时实际路径」持续绘制 MapLocator 的真实定位与当前位置；新一轮试跑会清空上一轮轨迹，定位空窗不会用预测点补齐。
-- 滑索开关：勾选侧栏的 `滑索规划` 后，预览、复制与实机试跑都携带路线级 `zip: true`。没有滑索数据或滑索成本不占优时按运行时规则回退为步行。
+- 滑索开关：侧栏的 `滑索规划` 决定预览与实机试跑是否考虑滑索，勾选时携带 `zip: true`，不勾时携带 `zip: false`；复制完整参数只在勾选时进行。没有滑索数据或滑索不占优时按运行时规则保持作者路线。
 - 滑索架图层：路径编辑、断言模式和日志分析共用 `图层` 中的滑索架开关。路径编辑与断言模式显示当前安装目录记录，日志分析显示本次选择和同组 ZIP 快照中的滑索架；三种 2D 模式都可单击滑索架查看底图 / 世界坐标、导航高度、模板与 Level，并共用 A / B 选择、可能中心跨度和几何连接判断。图层与路线级滑索开关相互独立，不改变预览参数、复制内容或实机试跑；记录候选可能未供电或已被运行时排除，几何可连接也不等于实际可用。
 - 多账号滑索：官方地图导入从 `/map/mark/list` 的 `roleId` 生成伪匿名账号标识，游戏运行时由场景初始化捕获 UID 并生成相同标识。规划器先按账号、再按地图筛选。旧版没有账号字段的记录不会被导入直接归属，而是在开启滑索寻路时由当前账号认领：当前账号名下一条记录都没有时，这些旧坐标整体归属给它并就地落盘，升级后无需重新导入；当前账号名下已有记录时不做认领，避免两套坐标混用后随换号静默失效。认领成功后会给出一条提示，详见 `ZiplineStore::claimLegacyRecords`。离线路线预览无法读取游戏 UID，可在 `滑索规划` 旁的账号下拉框中选择导入过的伪匿名账号，默认使用最近一次导入并在浏览器中记忆选择；该选择同时用于当前安装目录的滑索架图层，但不会写入复制参数或覆盖实机运行时账号。日志分析仍按对应运行日志中的账号标识过滤快照。Windows 端导入由 cpp-algo 的内嵌浏览器完成；Linux 端由 `agent/go-service/ziplineimport` 的本地受限 MITM 代理抄取同一接口，账号标识同样取自请求 URL 的 `roleId`，记录同样按 `(account_id, map_id)` 落盘，一次导入只接受唯一 `roleId`，否则整批拒绝。Windows 端每次导入都会清除内置浏览器的站点登录态；Linux 端每次导入都使用临时 Firefox 配置，登录态同样不会保留。
 
 通常需要修改的只有三处：
 
-1. 将关键交互点改为 `INTERACT`；必须触发的交互再勾选「路径必经」。需要先确认提示文字再按键时，导出后为该点补写 `interact_text`，见[异步交互](#异步交互-interact)。
+1. 将关键交互点改为 `INTERACT`。`INTERACT` 点总会执行，无需勾选「路径必经」。需要先确认提示文字再按键时，导出后为该点补写 `interact_text`，见[异步交互](#异步交互-interact)。
 2. 将需要跳跃、冲刺、等待传送、过图的点改为对应动作。
 3. 检查跨区域前后两个点的位置是否合理。
 
@@ -254,7 +254,7 @@ uv run map-navigator --port 9000 --no-browser
 
 `路径编辑` 与 `断言` 都以 `选择项目节点` 作为主导入入口。工具扫描当前项目 `assets` 下的 JSON / JSONC，并按当前模式只展示适用节点：
 
-- `路径编辑`：选择带有效 `custom_action_param.path` 的 `MapNavigateAction`，载入完整路径继续编辑；节点已有 `zip: true` 时同步勾选滑索开关；
+- `路径编辑`：选择带有效 `custom_action_param.path` 的 `MapNavigateAction`，载入完整路径继续编辑；节点没有写 `zip: false` 时同步勾选滑索开关；
 - `断言`：默认选择 `MapLocateAssertLocation`，直接载入 `zone_id` 与 `target`；切到 `参考路线` 后也可选择 `MapNavigateAction`，在断言底图上显示真实路径点。
 
 选择器支持按资源路径、节点名或区域搜索，并显示节点类型、点数与区域摘要，避免同一文件包含多个节点时自动选错。导航路径缺少 zone 信息时，仍需在页面中为各段分配区域；导入时严格校验动作语义，**未知动作直接拒绝**，不做静默降级。
@@ -267,7 +267,7 @@ uv run map-navigator --port 9000 --no-browser
 
 该格式通常由工具导出，无需手写；需要手动调整时参考本节。
 
-`path` 为数组，元素按作者预期的执行顺序排列。是否允许跳过中间点，见[执行顺序与 `required`](#执行顺序与-required)。
+`path` 为数组，元素按作者预期的执行顺序排列。滑索能替换哪些点，见[执行顺序与 `required`](#执行顺序与-required)。
 
 **仅坐标**，到达后继续下一个点：
 
@@ -353,25 +353,21 @@ uv run map-navigator --port 9000 --no-browser
 
 ### 执行顺序与 `required`
 
-未启用滑索时，导航器严格按照 `path` 的顺序执行。普通点和动作都会保留，`NAVMESH` 也会逐点展开。
+导航器按照 `path` 的顺序执行作者写的每个点。普通点和动作都会保留，`NAVMESH` 也会逐点展开。
 
-启用滑索后，导航器才会尝试跨过中间点，从当前区间的起点直接规划到末端。直达成功时，中间的移动和可达性兜底点会被跳过；直达失败时，仍按作者路径逐点执行。这类可选点包括 `NAVMESH`、`RUN`、`SPRINT`、`JUMP`、`FIGHT`、`TRANSFER`、`JUMP_PAD`、`PORTAL` 和 `INTERACT`。
+滑索是对作者路线的局部替换。展开时先按边界把路线切成若干段，每段照作者路线展开作为步行基线，再比较「按基线走完这一段」与「走到上索点 → 坐滑索 → 从下索点走到段尾」的代价。滑索省下的代价超过 `min_gain` 时才把这一段的走路整段换掉，否则这一段与不考虑滑索时逐点一致。
 
-以下节点始终保留，无需填写 `required`：
+以下节点都是段的边界，滑索不会跨过它们，动作照常执行：
 
 - `ZONE`：声明区域上下文；
-- `HEADING`：调整朝向；
-- `COLLECT`、`DIG`：执行采集或挖掘任务。
-- `FIND`：寻找并接近识别框里的目标。
-- `TRIGGER`：路线终点，命中触发节点或走到 `target` 即结束导航。
+- 除 `RUN`、`NAVMESH` 以外的所有动作点，如 `INTERACT`、`JUMP_PAD`、`PORTAL`、`COLLECT`、`DIG`、`FIND`、`TRIGGER`、`HEADING`；
+- 写了 `"required": true` 的 `RUN` 或 `NAVMESH` 点。
 
-启用滑索时，如果其他节点也必须抵达并执行，请添加 `"required": true`。该节点会结束当前优化区间，后续路线从这里重新开始。数组格式没有该字段，因此必经点必须使用对象格式。
-
-例如，路线必须经过某块跳板时应写成：
+能被滑索替换的只有两个边界之间的 `RUN` 与 `NAVMESH` 点。路线必须经过某个 `RUN` 或 `NAVMESH` 点时，请添加 `"required": true`。数组格式没有该字段，因此必经点必须使用对象格式：
 
 ```json
 {
-    "action": "JUMP_PAD",
+    "action": "NAVMESH",
     "target": [
         1001.89,
         305.68
@@ -380,7 +376,7 @@ uv run map-navigator --port 9000 --no-browser
 }
 ```
 
-路线末点的位置始终是最终目标。末点携带普通动作时，如果必须执行该动作，也需要填写 `required`。未启用滑索时，所有节点本来就会依次执行，`required` 不改变执行结果。
+路线是否考虑滑索由 `custom_action_param` 的 `zip` 决定：不写或写 `true` 都会考虑，写 `false` 则这条路线全程按作者路线步行。用户在设置里把「寻路时使用滑索」选为「始终禁用」时，所有路线都全程步行。
 
 ### 严格到达
 
@@ -397,7 +393,7 @@ uv run map-navigator --port 9000 --no-browser
 
 默认到点判定保留一定半径；标记严格后判定半径更小、到点更慢，但落点更精确。交互、跳台、传送、过图等动作本身已使用更严格的到点语义。
 
-严格到达只控制到点精度，不代表必经。启用滑索时，全局规划仍可跳过严格到达点；必须执行时应使用 `required`。
+严格到达只控制到点精度，不代表必经。严格到达的 `RUN` 点仍可能被滑索替换；必须经过时应使用 `required`。
 
 ### 区域声明：`ZONE`
 
@@ -455,6 +451,7 @@ uv run map-navigator --port 9000 --no-browser
 | `heading_source` | `"character"` | 整次调用的导航与滑索架瞄准朝向来源：`"character"` 使用角色朝向，`"camera"` 使用镜头朝向；不会相互回退 |
 | `arrival_timeout` | `60000` | 单个点允许的最长到达时间，超时判定失败，单位毫秒 |
 | `sprint_threshold` | `16.0` | 自动冲刺的判定阈值，依据**前方连续可跑段的长度**而非当前点的直线距离 |
+| `enable_sprint` | `true` | 是否允许冲刺。填 `false` 则整次导航从头到尾都不冲刺：自动冲刺不触发，路线里的 `SPRINT` 点也直接跳过 |
 | `interact_text` | 空 | 整条路线的交互提示文字默认值，见[异步交互](#异步交互-interact) |
 | `interact_scan` | 空 | 整条路线的行进预筛节点默认值，见[换掉图标预筛](#换掉图标预筛) |
 | `interact_rec` | `false` | 整条路线的 `INTERACT` 点是否只认提示不按键，见[只认提示不按键](#只认提示不按键rec-模式) |
@@ -546,7 +543,7 @@ uv run map-navigator --port 9000 --no-browser
 
 > [!WARNING]
 >
-> 相邻路径点之间应当可以连贯走到。导航器无法穿模或理解业务机关；跳板用 `JUMP_PAD`，过图、下落、上升机关等路段可拆分为 `PORTAL` / `TRANSFER` / 业务节点作为作者路径兜底。启用滑索后，必须经过或执行的节点应标记为 `required`。
+> 相邻路径点之间应当可以连贯走到。导航器无法穿模或理解业务机关；跳板用 `JUMP_PAD`，过图、下落、上升机关等路段可拆分为 `PORTAL` / `TRANSFER` / 业务节点作为作者路径兜底。动作点总会执行，只有必须经过的 `RUN` / `NAVMESH` 点需要标记 `required`。
 
 ---
 
@@ -560,9 +557,9 @@ uv run map-navigator --port 9000 --no-browser
 4. 按当前楼层高度做落点吸附，把窗口内的三角面栅格化为带高度区间的格子，在格子图上执行 A\*，再对结果做净空约束下的拉直。
 5. 将规划结果展开为普通 `RUN` 路径点，交给移动执行链路。目标不可达时另有盲走兜底，走出的路线不来自规划器。
 
-未启用滑索时，`NAVMESH` 按作者顺序逐点展开。启用滑索后，展开流程先按[路径边界](#执行顺序与-required)划分区间，再比较每个区间的纯步行与滑索路线；无法直达时，回退到作者路径逐点执行。
+`NAVMESH` 始终按作者顺序逐点展开。考虑滑索时，展开流程再按[路径边界](#执行顺序与-required)划分区间，以每个区间的作者路线展开结果作为步行基线；滑索路线的代价比基线低出 `min_gain` 以上时才替换这一区间，下索后的步行优先落在基线到达的那一层。
 
-纯步行不连通时不会直接判定整个区间不可达：开启滑索后，规划器会继续寻找一条“走到上索点 → 连续多跳滑索 → 从下索点走到终点”的桥接路线。只要上下索两端分别接得上起点和终点所在的可走面，这条连续链就优先于盲走和作者提示回退；纯步行本身可达时，仍按全程代价与 `min_gain` 门槛比较，不会为了多坐几段滑索无条件绕路。
+某个 `NAVMESH` 点纯步行不连通时不会直接判定不可达：规划器会继续寻找一条“走到上索点 → 连续多跳滑索 → 从下索点走到该点”的桥接路线。只要上下索两端分别接得上起点和终点所在的可走面，这条连续链就优先于盲走兜底；纯步行可达时，仍按区间代价与 `min_gain` 门槛比较，不会为了多坐几段滑索无条件绕路。
 
 连续链中的某一跳执行失败时，运行时会丢弃该链剩余跳数，等待定位重新稳定并贴回 navmesh，再从剩余路线中第一个实际可达的点重新接入。若没有可达接入点则本次导航明确失败，不会继续沿用从预期下索点生成的旧离索路径。
 
@@ -573,6 +570,17 @@ uv run map-navigator --port 9000 --no-browser
 > [!NOTE]
 >
 > 路径编辑器的规划预览直接调用 `MapNavigateAction` 使用的 C++ 路线展开逻辑，并读取同一份 `base.nav.gz`。预览不会在 JavaScript 中另写一套路由算法；实际执行仍受定位、地形与游戏内状况影响，外层 Pipeline 仍需做好失败兜底。
+
+### 升降索
+
+`base.fields.nav.gz` 收录了数据里两端都标为一开始就放下的升降索，每根带绳底、绳顶两个落脚点和一次乘坐的秒数（升降高度按升降速度折算，加上一秒动作）。要玩家先到顶上放下的升降索不收：账号里不一定开过，规划进去就可能走到绳底才发现用不了。
+
+升降索只往上坐，往下一律从台沿跳。规划器在两种情况下试它：
+
+- 起点和终点不在同一片连通的可走面上：台沿跳不过去，或坐升降索比跳下去的那条路更短时，用升降索那条；
+- 同一片可走面上：乘坐秒数按跑步速度折成路程，起点走到绳底、绳顶走到终点再加上这段路程，比直接走更短时才换。从绳底走到绳顶本来就比坐上去近的升降索不参与。
+
+升降索只在路线开始时的整段展开里接，行进中偏离路线后的局部重规划不接。规划结果里绳底是一个严格到达的 `INTERACT` 点，交互文字读 `MapNavigator/Interact.json` 里的 `MapNavigatorRopeUseText`；这个节点不存在或没有文字时整段展开不接升降索。按下交互后先等乘坐时间，再等定位连续稳定，然后从绳顶接着走。绳底没出现交互提示（例如这个账号里升降索被收起了）时，这根升降索在本次导航里标为不可用，从当前位置重新展开剩余路线。
 
 ---
 
@@ -603,15 +611,18 @@ uv run map-navigator --port 9000 --no-browser
 ### 相关文件
 
 | 文件 | 职责 | 何时需要修改 |
-| ------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
-| `assets/resource/pipeline/AutoCollect/AutoCollectRoute*.json` | 路线定义，包含 `MapNavigateAction` 节点和采集坐标 | 新增路线、调坐标、增减采集点 |
+| --- | --- | --- |
+| `assets/resource/pipeline/AutoCollect/<地区>/<路线 id>.json` | 路线定义，包含 `MapNavigateAction` 节点和采集坐标 | 新增路线、调坐标、增减采集点 |
+| `tools/AutoCollectRoute/routes.json` | 路线登记表：每条路线的地区与覆盖的采集物，以及稀有采集物的默认目标库存 | 新增路线、调整默认目标库存 |
+| `assets/resource/pipeline/AutoCollect/Dispatch.json` | 目标库存预判与按采集物调度路线，由登记表生成 | 不手改，改登记表后重新生成 |
+| `assets/resource/pipeline/AutoCollect/AutoCollectInventory.json` | 目标库存模式的仓库同步、同步失败兜底 | 调整库存同步流程 |
 | `assets/resource/pipeline/AutoCollect/AutoCollectClick.json` | `COLLECT` 触发的 OCR 与点击子任务，入口 `AutoCollectClickStart` | 增删 OCR 识别的采集物名称 |
 | `assets/resource/pipeline/AutoCollect/AutoCollectDig.json` | `DIG` 触发的挖掘子任务，入口 `AutoCollectDigStart` | 挖掘交互逻辑变化 |
-| `assets/resource/pipeline/AutoCollect.json` | 路线遍历、失败收集、任务前后存放背包 | 新增路线入口或调整总流程 |
+| `assets/resource/pipeline/AutoCollect.json` | 定时、失败收集、任务前后存放背包 | 调整总流程 |
 
-**绝大多数情况下只需修改 `AutoCollectRoute*.json`。**
+**绝大多数情况下只需修改路线文件和登记表。**
 
-整体流程：`AutoCollectLoop` 依次调用各路线的包装节点，包装节点通过通用的 `FailureCollectorRunTask` 执行已启用的路线；路线内任意节点失败时，包装 Action 记录该路线的 `{Route}Failed` 节点并返回成功，使 Pipeline 继续下一条。所有路线与后置背包整理结束后，`AutoCollectFinish` 按失败顺序调用这些节点，输出 `$option.*.label` 本地化文案，并使自动采集任务返回失败。
+整体流程：目标库存模式下，仓库同步完成后先由 `AutoCollectInventoryPreflight` 逐个判断已勾选的采集物，已达目标的直接停用其调度节点。随后 `AutoCollectLoop` 依次进入仍启用的采集物调度节点，依次执行名下路线的 `__AutoCollect<路线 id>Run` 节点；同一条路线覆盖多种采集物时，一轮只执行一次。`Run` 节点通过通用的 `FailureCollectorRunTask` 执行路线；路线内任意节点失败时，Action 记录该路线的 `__AutoCollect<路线 id>Failed` 节点并返回成功，使 Pipeline 继续下一条。所有路线与后置背包整理结束后，`AutoCollectFinish` 按失败顺序调用这些节点，输出 `$task.AutoCollect.route.*.failed` 本地化文案，并使自动采集任务返回失败。
 
 ### 无需修改的部分
 
@@ -619,7 +630,7 @@ uv run map-navigator --port 9000 --no-browser
 
 - `agent/cpp-algo/source/MapNavigator/navi_domain_types.h`：`ActionType` 枚举，`COLLECT` / `DIG` 在此声明。
 - `agent/cpp-algo/source/MapNavigator/navi_config.h`：子任务入口名、`pipeline_override`、采集后等待时间等常量。
-- `agent/cpp-algo/source/MapNavigator/semantic_nodes.cpp`：到达采集点后的执行逻辑。
+- `agent/cpp-algo/source/MapNavigator/semantic/semantic_nodes.cpp`：到达采集点后的执行逻辑。
 
 ### 注意事项
 
@@ -631,9 +642,9 @@ uv run map-navigator --port 9000 --no-browser
 
 ### 新增采集路线
 
-1. 在 `assets/resource/pipeline/AutoCollect/` 下新建 `AutoCollectRouteN.json`，参照现有路线编写 `Start` → `AssertLocation` → `Goto` → `End` 四节点骨架。
+1. 在 `assets/resource/pipeline/AutoCollect/<地区>/` 下新建 `<路线 id>.json`，参照现有路线编写 `Start` → `AssertLocation` → `Goto` → `End` 四节点骨架，节点名以 `AutoCollect<路线 id>` 开头。路线 id 由地区、各采集物的 PascalCase 英文名与序号依次拼接而成，多种采集物按 `routes.json` 中 `items` 的登记顺序全部拼上，序号在同一前缀下递增：武陵星门菌的第二条路线是 `WulingCosmagaric2`，同时采血菌与武陵石的路线是 `WulingBloodcapWulingstone1`。
 2. 使用工具录制路径，将采集目标点动作改为 `COLLECT` 或 `DIG`，复制 `path` 并粘贴到 `Goto` 节点的 `custom_action_param.path`。
-3. 在 `interface.json` / 任务入口 JSON 中注册新路线入口。
+3. 在 `tools/AutoCollectRoute/routes.json` 登记路线的 `id`、`region` 与 `items`，再运行 `uv run autocollect-route generate`，生成调度节点、任务选项与五种语言的文案。
 4. 无需修改 `AutoCollectClick.json`、`AutoCollectDig.json` 及任何 cpp-algo 源文件。
 
 ---
@@ -678,7 +689,7 @@ uv run map-navigator --port 9000 --no-browser
 - 只要导航走到位、把提示认出来，按键交回外层 Pipeline 决定时，加 `interact_rec`，见[只认提示不按键](#只认提示不按键rec-模式)。
 - 同一条路线可以混排多个业务的交互点、混排 `COLLECT` 与 `DIG`，数量不限。
 - **不需要**再补末尾的 `true`：`INTERACT` 本身即按严格到达语义处理。
-- 本例要求交互一定发生，所以写了 `required: true`；如果该交互只用于滑索规划失败后的路线兜底，可以省略。详见[执行顺序与 `required`](#执行顺序与-required)。
+- `INTERACT` 是滑索不会跨过的边界，交互总会执行，`required: true` 写不写效果相同。详见[执行顺序与 `required`](#执行顺序与-required)。
 
 工具中的操作方式：录制时正常走到交互物旁，停止录制后将该点动作改为 `INTERACT`，导出 `path` 后手动为该点补写 `interact_text`（编辑器目前不产出这个字段）。
 
@@ -827,7 +838,7 @@ OCR 不总是可靠，所以这个字段本来就是**一组**正则，而不是
 - 途中没等到提示时，**精确到点后仍会执行一次权威识别**，不会因为预筛漏了就整点跳过。因此每个异步交互点必定恰好跑一次权威识别：途中命中即走完，没命中则到点补跑。
 - **异步交互不会让导航失败。** 按键只发生在 OCR 命中注入文本时，rec 模式下则一次都不按；导航本身不校验交互是否真的发生，也不因为没识别到提示而报错。交互到底成不成，需要外层 Pipeline 自己验收（例如交互后应出现的界面）。
 
-交互会打开界面（登记台、委托板一类）时，**建议把该点作为路线的最后一个点并标 `required: true`**：界面一开角色就不再移动、小地图也被盖住，后面的点走不了。这与不写 `interact_text` 的 `INTERACT` 是同一条作者纪律，异步与否都一样。
+交互会打开界面（登记台、委托板一类）时，**建议把该点作为路线的最后一个点**：界面一开角色就不再移动、小地图也被盖住，后面的点走不了。这与不写 `interact_text` 的 `INTERACT` 是同一条作者纪律，异步与否都一样。
 
 `MapNavigatorInteract` 节点里预置了一条永远匹配不上的占位文本，路线没注入 `interact_text` 时该节点识别不到任何东西，因此不会误按。
 
@@ -847,11 +858,12 @@ OCR 不总是可靠，所以这个字段本来就是**一组**正则，而不是
 
 以下文件由 cpp-algo 维护者负责，路线作者无需修改：
 
-- `agent/cpp-algo/source/MapNavigator/async_prompt_action.h` / `.cpp`：提示驱动动作的公共实现，`COLLECT` 与异步 `INTERACT` 共用一套。
-- `agent/cpp-algo/source/MapNavigator/prompt_scan_profile.h` / `.cpp`：从 Pipeline 节点读预筛参数与交互文字表，以及那一串校验。
+- `agent/cpp-algo/source/MapNavigator/semantic/async_prompt_action.h` / `.cpp`：提示驱动动作的公共实现，`COLLECT` 与异步 `INTERACT` 共用一套。
+- `agent/cpp-algo/source/MapNavigator/sensing/prompt_scan_profile.h` / `.cpp`：从 Pipeline 节点读预筛参数，以及那一串校验。
+- `agent/cpp-algo/source/MapNavigator/sensing/pipeline_node_reader.h` / `.cpp`：读 Pipeline 节点的 ROI、识别类型与交互文字表。
 - `agent/cpp-algo/source/MapNavigator/navi_config.h`：子任务节点名、预筛节拍与兜底常量、判定值等。
 - `agent/cpp-algo/source/MapNavigator/navi_param_parser.cpp`：`interact_text` / `interact_scan` / `interact_rec` 的解析与路线级默认值下发，以及开跑前把点名的 OCR 节点读成文字表。
-- `agent/cpp-algo/source/MapNavigator/semantic_nodes.cpp`：到点后的兜底执行逻辑。
+- `agent/cpp-algo/source/MapNavigator/semantic/semantic_nodes.cpp`：到点后的兜底执行逻辑。
 
 ---
 
@@ -885,7 +897,7 @@ OCR 不总是可靠，所以这个字段本来就是**一组**正则，而不是
 - **控制节点形态**：未配置 `target` 时，角色抵达该位置后立即开始搜索。
 - 两种形态的区别仅在于搜索的起始位置。
 - 数组形式 `[182.52, 173.4, "FIND"]` 仅携带坐标，目标来源与完成条件需由路线级默认值提供。
-- `FIND` 属于固有边界节点，启用滑索规划时不会被跳过。
+- `FIND` 是动作点，滑索不会跨过它。
 
 ### 运行行为
 
@@ -945,7 +957,7 @@ OCR 不总是可靠，所以这个字段本来就是**一组**正则，而不是
 | 业务自己的路线 JSON | `MapNavigateAction` 的 `path`、`FIND` 点与 `find_*` 字段 | 新增寻找点、换目标 |
 | 业务自己的识别节点 | `find_target` / `find_stop` 点名的节点 | 目标或提示的 ROI、文本变化 |
 | `assets/resource/pipeline/MapNavigator/Find.json` | 内联文本用的内置 OCR 节点 `MapNavigatorFind`；仅由导航按帧调用，从不单独派发 | 内联文本的默认 ROI |
-| `agent/cpp-algo/source/MapNavigator/find_action.cpp` | 搜索与接近的实现、退出时的记账清理 | 由 cpp-algo 维护者根据实机表现调参 |
+| `agent/cpp-algo/source/MapNavigator/semantic/find_action.cpp` | 搜索与接近的实现、退出时的记账清理 | 由 cpp-algo 维护者根据实机表现调参 |
 
 ---
 
@@ -1004,7 +1016,7 @@ OCR 不总是可靠，所以这个字段本来就是**一组**正则，而不是
 | ----------------------------------------------------- | -------------------------------------------- | ------------------------ |
 | 业务自己的路线 JSON | `MapNavigateAction` 的 `path`、`TRIGGER` 点与 `trigger_node` | 新增触发终点、换识别节点 |
 | 业务自己的识别节点 | `trigger_node` 点名的节点 | 命中画面的 ROI、文本变化 |
-| `agent/cpp-algo/source/MapNavigator/trigger_action.cpp` | 行进途中的识别与到点完成 | 由 cpp-algo 维护者维护 |
+| `agent/cpp-algo/source/MapNavigator/semantic/trigger_action.cpp` | 行进途中的识别与到点完成 | 由 cpp-algo 维护者维护 |
 
 ---
 
@@ -1070,7 +1082,7 @@ OCR 不总是可靠，所以这个字段本来就是**一组**正则，而不是
 | 文件 | 职责 | 何时需要修改 |
 | ------------------------------------------------------ | ---------------------------- | ---------------------- |
 | 业务自己的路线 JSON | `JUMP_PAD` 点与前后的接近点、落点 | 新增或调整跳板路段 |
-| `agent/cpp-algo/source/MapNavigator/jump_pad_action.cpp` | 站位、按跳、起飞与落地判定 | 由 cpp-algo 维护者维护 |
+| `agent/cpp-algo/source/MapNavigator/semantic/jump_pad_action.cpp` | 站位、按跳、起飞与落地判定 | 由 cpp-algo 维护者维护 |
 
 ---
 
@@ -1079,5 +1091,5 @@ OCR 不总是可靠，所以这个字段本来就是**一组**正则，而不是
 1. **首选 `NAVMESH`，需要语义再录制。** 纯移动路线在路径编辑器中手工打点并规划确认后即可复制；预览走不通的目标当场调整，不必等到运行时失败。只有含交互、过图等语义的路线才需要录制。
 2. **录制优于手写。** 实际走一遍通常比凭感觉填写坐标更准确；若录制时打点精度不足，可放慢移动速度。
 3. **保证起点状态稳定。** 录制前先调整好站位与视角，可显著减少后续的修点工作。
-4. **特殊动作点少而精。** 只在需要交互、过跳板或切换区域的位置添加 `INTERACT`、`JUMP_PAD`、`TRANSFER`、`PORTAL`；启用滑索后，必须执行的点应标记为 `required`。`HEADING`、`COLLECT`、`DIG`、`FIND`、`TRIGGER` 始终保留。
+4. **特殊动作点少而精。** 只在需要交互、过跳板或切换区域的位置添加 `INTERACT`、`JUMP_PAD`、`TRANSFER`、`PORTAL`。动作点总会执行，只有必须经过的 `RUN` / `NAVMESH` 点需要标记 `required`。
 5. **跨区域路线务必检查过图点。** 自动补充的 `PORTAL` 仅是语义标注，不代表每个跨区域边界都天然合理。
