@@ -2118,6 +2118,7 @@
     "task.AutoStockStaple.description": "안정 수요 물자를 구매하며, 매주 갱신되는 물자만 구매합니다.",
     "task.AutoStockStaple.focus.quantity_control.better_sliding_failed": "수량 조절에 실패하여 구매를 취소합니다",
     "task.AutoStockStaple.focus.quantity_control.purchase_page_failed": "구매 화면이 정상적으로 열리지 않았습니다",
+    "task.AutoStockStaple.focus.quantity_control.purchase_not_effective": "구매 확인 후 보상 화면이 나타나지 않아 구매가 이루어지지 않았습니다(소지품이 가득 찼을 수 있음). 안정 물자 작업을 중지합니다",
     "task.AutoStockStaple.focus.quantity_control.reached.aurylene_camera": "醚质相机 수량 달성",
     "task.AutoStockStaple.focus.quantity_control.reached.bizarro_cupcake": "怪味纸杯蛋糕 수량 달성",
     "task.AutoStockStaple.focus.quantity_control.reached.breeze_of_kjersch": "耶尔什微风 수량 달성",

@@ -2118,6 +2118,7 @@
     "task.AutoStockStaple.description": "安定需要物資を購入し、毎週更新される物資のみ購入します。",
     "task.AutoStockStaple.focus.quantity_control.better_sliding_failed": "数量調整に失敗したため、購入をキャンセルします",
     "task.AutoStockStaple.focus.quantity_control.purchase_page_failed": "購入画面が正常に開きませんでした",
+    "task.AutoStockStaple.focus.quantity_control.purchase_not_effective": "購入確認後に報酬画面が表示されず購入が成立しませんでした（所持品がいっぱいの可能性）。安定物資任務を停止します",
     "task.AutoStockStaple.focus.quantity_control.reached.aurylene_camera": "醚质相机 数量達成",
     "task.AutoStockStaple.focus.quantity_control.reached.bizarro_cupcake": "怪味纸杯蛋糕 数量達成",
     "task.AutoStockStaple.focus.quantity_control.reached.breeze_of_kjersch": "耶尔什微风 数量達成",

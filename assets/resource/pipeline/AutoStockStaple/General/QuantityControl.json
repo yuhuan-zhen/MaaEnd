@@ -4793,9 +4793,67 @@
                 239
             ]
         },
+        // 正常购买后奖励窗口在 1~2 秒内出现；这里兜住「确认购买没有被游戏接受」的情况：
+        // 购买弹窗原地不动、奖励窗口永远不出现（物品栏已满时表现为静默拒绝），
+        // 不设上限就要空转到 20 秒默认超时，任务以无原因失败收尾。
+        "timeout": 10000,
         "next": [
             "AutoStockStapleQuantityControlCloseRewards"
+        ],
+        "on_error": [
+            "AutoStockStapleQuantityControlPurchaseNotEffective"
         ]
+    },
+    "AutoStockStapleQuantityControlPurchaseNotEffective": {
+        "desc": "确认购买后等不到奖励窗口、购买界面仍停在原地：购买未生效（物品栏已满等），关闭购买界面并停止任务",
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    //这里只是确认仍然还在购买商品的界面
+                    "AutoStockStapleQuantityControl",
+                    "YellowConfirmButtonType1"
+                ]
+            }
+        },
+        "pre_delay": 0,
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": [
+            "AutoStockStapleQuantityControlPurchaseNotEffectiveClose"
+        ],
+        "focus": {
+            "Node.Recognition.Succeeded": "$task.AutoStockStaple.focus.quantity_control.purchase_not_effective"
+        }
+    },
+    "AutoStockStapleQuantityControlPurchaseNotEffectiveClose": {
+        "desc": "关闭未生效的购买界面",
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "CloseButtonType1"
+                ]
+            }
+        },
+        "pre_delay": 0,
+        "action": {
+            "type": "Click"
+        },
+        "post_wait_freezes": 200,
+        "post_delay": 0,
+        "rate_limit": 0,
+        "next": [
+            "AutoStockStapleQuantityControlPurchaseNotEffectiveStop"
+        ]
+    },
+    "AutoStockStapleQuantityControlPurchaseNotEffectiveStop": {
+        "desc": "购买未生效后停止稳定物资任务：物品栏满时继续买只会重复卡在同一处",
+        "recognition": "DirectHit",
+        "pre_delay": 0,
+        "action": "StopTask",
+        "post_delay": 0,
+        "rate_limit": 0
     },
     "AutoStockStapleQuantityControlResetRecognitionParams": {
         "desc": "重置识别参数",

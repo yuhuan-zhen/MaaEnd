@@ -2118,6 +2118,7 @@
     "task.AutoStockStaple.description": "購買穩定需求物資，僅購買每週刷新的物品。",
     "task.AutoStockStaple.focus.quantity_control.better_sliding_failed": "定量滑動失敗，取消購買",
     "task.AutoStockStaple.focus.quantity_control.purchase_page_failed": "購買頁面未正常開啟",
+    "task.AutoStockStaple.focus.quantity_control.purchase_not_effective": "確認購買後未進入獎勵介面，購買未生效（物品欄可能已滿），已停止穩定物資任務",
     "task.AutoStockStaple.focus.quantity_control.reached.aurylene_camera": "醚質相機數量達標",
     "task.AutoStockStaple.focus.quantity_control.reached.bizarro_cupcake": "怪味杯子蛋糕數量達標",
     "task.AutoStockStaple.focus.quantity_control.reached.breeze_of_kjersch": "耶爾什微風數量達標",
